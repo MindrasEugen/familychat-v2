@@ -4,13 +4,13 @@ import { describe, expect, it } from 'vitest'
 import App from './App'
 
 describe('App', () => {
-  it('reindirizza la home su /rooms e mostra il placeholder camere', () => {
+  it('un visitatore non autenticato viene reindirizzato al login', async () => {
     render(
       <MemoryRouter initialEntries={['/']}>
         <App />
       </MemoryRouter>,
     )
 
-    expect(screen.getByRole('heading', { name: 'Le tue camere' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Accedi' })).toBeInTheDocument()
   })
 })
