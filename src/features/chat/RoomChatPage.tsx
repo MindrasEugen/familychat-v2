@@ -1,7 +1,11 @@
+import { useMemo } from 'react'
 import { useParams } from 'react-router-dom'
 import { useAuthStatus } from '../auth/useAuthStatus'
 import { useRoom, useRoomMembers } from '../rooms/useRoomDetail'
 import { useCreateRoomInvite, useRevokeRoomInvite, useRoomInvites } from '../rooms/useRoomInvites'
+import { MessageComposer } from './MessageComposer'
+import { MessageList } from './MessageList'
+import { useMessages, useRoomMessagesRealtime } from './useMessages'
 
 function InviteList({ roomId }: { roomId: string }) {
   const invitesQuery = useRoomInvites(roomId)
@@ -41,6 +45,16 @@ export function RoomChatPage() {
   const roomQuery = useRoom(roomId)
   const membersQuery = useRoomMembers(roomId)
   const createInvite = useCreateRoomInvite(roomId, userId)
+  const messagesQuery = useMessages(roomId)
+  useRoomMessagesRealtime(roomId)
+
+  const usernamesById = useMemo(() => {
+    const map = new Map<string, string>()
+    for (const member of membersQuery.data ?? []) {
+      if (member.AAA3_profiles?.username) map.set(member.user_id, member.AAA3_profiles.username)
+    }
+    return map
+  }, [membersQuery.data])
 
   if (roomQuery.isPending) return <p>Caricamento…</p>
   if (roomQuery.isError || !roomQuery.data) {
@@ -80,7 +94,18 @@ export function RoomChatPage() {
       {roomId && <InviteList roomId={roomId} />}
 
       <hr />
-      <p>Placeholder — cronologia messaggi e invio da implementare.</p>
+
+      <h2>Messaggi</h2>
+      {messagesQuery.isPending && <p>Caricamento…</p>}
+      {messagesQuery.isError && <p role="alert">Errore nel caricamento dei messaggi.</p>}
+      {messagesQuery.data && (
+        <MessageList
+          messages={messagesQuery.data}
+          usernamesById={usernamesById}
+          currentUserId={userId}
+        />
+      )}
+      <MessageComposer roomId={roomId} userId={userId} />
     </section>
   )
 }

@@ -46,6 +46,12 @@ stato, non ripete le motivazioni).
   2. `useRoom` usava `.single()`, che genera un HTTP 406 quando RLS nasconde la riga a un non-membro (caso legittimo, non un errore) — la UI restava bloccata su "Caricamento…" a tempo indeterminato per un utente che visita l'URL di una camera di cui non fa parte. Corretto con `.maybeSingle()` (stesso pattern già usato in `useProfile`).
 - **Verificato end-to-end in browser reale con tre account** (fondatore, invitato, estraneo): crea camera → genera invito → un secondo account si unisce col codice → entrambi compaiono nella lista membri → un membro non autorizzato non riesce a revocare l'invito altrui (bloccato server-side) → il fondatore revoca con successo → un terzo account estraneo alla camera vede correttamente "Camera non trovata, o non ne fai parte" invece di restare bloccato. Account e camere di test ripuliti dal DB dopo la verifica (cascade confermato, incluso il vincolo `on delete restrict` su `founder_id` che ha correttamente impedito di cancellare l'utente fondatore prima della camera).
 
+### 2026-09-05 — Cronologia messaggi (testo) e realtime
+- `useMessages`/`useRoomMessagesRealtime`/`useSendMessage` (`src/features/chat/useMessages.ts`): fetch ultimi 100 messaggi, sottoscrizione realtime su INSERT/DELETE, invio. `MessageList`/`MessageComposer` come componenti separati (lezione 7), `RoomChatPage` li assembla usando la mappa membri già caricata per risolvere `sender_id` → username (niente join aggiuntivo, i mittenti sono sempre membri della camera).
+- **Lezione 10 applicata concretamente**, non solo come principio: `mergeMessages` unisce sempre per id e riordina per `created_at`, sia per il fetch iniziale (che si fonde con la cache esistente invece di sostituirla — copre il caso di un messaggio realtime arrivato mentre il fetch era in volo) sia per gli eventi realtime sia per l'invio (nessuna sostituzione grezza, mai un elenco svuotato e ripopolato). Il canale realtime vive per tutto il mount della pagina camera (dipendenza solo da `roomId`), non viene ricreato ad eventi di focus/rete.
+- **Verificato end-to-end in browser reale**: un messaggio inserito da un secondo utente **via chiamata API diretta** (non dal browser) compare nella UI aperta senza ricaricare la pagina (realtime INSERT); un messaggio inviato dal browser stesso compare una sola volta nonostante arrivi sia dalla risposta della mutation sia dall'eco realtime (merge per id verificato, non solo teorico); un messaggio cancellato via SQL sparisce dalla UI aperta senza reload (realtime DELETE). Dati di test ripuliti dal DB dopo la verifica.
+- **Non incluso in questo giro** (solo testo): invio foto (serve la cascata HEIC — lezione 5 — e il bucket `room-photos` già pronto ma non ancora collegato), traduzione automatica inline, correzione traduzione, cancellazione messaggi da UI (le policy DB ci sono già), paginazione oltre gli ultimi 100 messaggi.
+
 ## Da fare
 
 Ripreso da `PROMPT_REACT_REWRITE.md`.
@@ -69,8 +75,10 @@ Ripreso da `PROMPT_REACT_REWRITE.md`.
 - [ ] Upload foto profilo (colonna `avatar_url` già pronta in `AAA3_profiles`, ma manca un bucket storage dedicato e l'UI di upload — non incluso in questo giro, solo lo username).
 
 ### Chat
-- [ ] Cronologia messaggi con TanStack Query: merge per id + ordinamento per timestamp, mai svuotare e ripopolare la lista mentre una sottoscrizione realtime è attiva sulla stessa camera (lezione 10).
-- [ ] Invio testo e foto, con la stessa cascata di decodifica HEIC della v1 (`createImageBitmap` → `<img>` → `heic2any` con timeout) e un fallback esplicito se la decodifica fallisce (lezione 5).
+- [x] Cronologia messaggi (testo) con TanStack Query, merge per id, realtime — vedi "Fatto" sopra (2026-09-05).
+- [ ] Invio foto, con la stessa cascata di decodifica HEIC della v1 (`createImageBitmap` → `<img>` → `heic2any` con timeout) e un fallback esplicito se la decodifica fallisce (lezione 5) — il bucket `room-photos` esiste già.
+- [ ] Cancellazione messaggi da UI (proprio messaggio, o qualunque messaggio se fondatore — policy DB già presenti).
+- [ ] Paginazione/caricamento cronologia oltre gli ultimi 100 messaggi.
 - [ ] Traduzione automatica inline nella lingua di chi legge.
 - [ ] Correzione traduzione dalla chat (tocco lungo → "Correggi traduzione") che aggiorna `translation_memory`.
 
