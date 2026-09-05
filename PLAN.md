@@ -20,20 +20,24 @@ stato, non ripete le motivazioni).
 - `PROMPT_REACT_REWRITE.md` = copia integrale del documento di decisioni (`familychat-v2-react-prompt3.md`).
 - Repo git inizializzato con commit iniziale.
 
+### 2026-09-05 — Schema Supabase v2 (bozza, non ancora applicata)
+- Migrazione `supabase/migrations/20260905083821_init_v2_schema.sql` (via `supabase init` + `supabase migration new`) con lo schema completo: `AAA3_profiles`, `AAA3_rooms`, `AAA3_room_members`, `AAA3_room_invites`, `AAA3_chat_messages`, `AAA3_translation_memory` — prefisso `AAA3_` su richiesta esplicita dell'utente. RLS su tutte le tabelle; iscrizione a una camera solo tramite le funzioni `create_room`/`accept_room_invite` (security definer), mai insert diretto su `AAA3_room_members`; ruoli fondatore/membro come da documento; retention 30gg via `pg_cron`; bucket storage `room-photos` (distinto da `chat-photos` di v1) con policy per membership; vincolo `AAA3_translation_memory_no_silent_noop` che impedisce a livello DB di salvare una traduzione identica all'originale tra lingue diverse (lezione 4); trigger che protegge le entry `corrected_by_user = true` da sovrascritture automatiche.
+- Verificato che nessun nome collide con le tabelle esistenti della v1 nello stesso progetto Supabase (`public.messages`, `public.push_subscriptions`, `public.todos`, bucket `chat-photos` — vedi `FamilyChat/DB.sql`).
+- **Non ancora applicata al progetto Supabase reale** (`qamvkevkddfwyxhbftoy`, condiviso con la v1 in produzione) — richiede conferma esplicita prima di eseguire `supabase link` + `supabase db push`, dato che tocca un database condiviso con dati reali. Non validata contro un'istanza Postgres locale (Docker non disponibile su questa macchina per `supabase db start`) — solo revisione manuale riga per riga.
+
 ## Da fare
 
-Ripreso da `PROMPT_REACT_REWRITE.md` — non ancora iniziato, nessuna riga di logica reale scritta oltre ai placeholder.
+Ripreso da `PROMPT_REACT_REWRITE.md` — nessuna riga di logica applicativa reale scritta oltre ai placeholder (lo schema DB è progettato ma non applicato, vedi sopra).
 
 ### Setup/manuale
+- [ ] Applicare la migrazione `20260905083821_init_v2_schema.sql` al progetto Supabase reale (richiede conferma esplicita — vedi nota sopra).
 - [ ] `pnpm exec playwright install` (non eseguito nello scaffold per evitare un download pesante non richiesto) prima di poter lanciare `pnpm test:e2e`.
 - [ ] Decidere se serve ancora la PWA (service worker, manifest, `vite-plugin-pwa`) con l'architettura nuova — non dare per scontato solo perché la v1 la aveva.
 
-### Modello dati Supabase (nuovo, da progettare e migrare sul progetto esistente)
-- [ ] Tabella profili utente (username, foto profilo) legata a un account Supabase individuale — sostituisce l'identificazione per nome-device della v1.
-- [ ] Camere con invito (non più credenziali condivise): creazione camera, inviti, membership.
-- [ ] Due ruoli: fondatore (controllo pieno: cancella messaggi altrui, gestisce membri, presumibilmente elimina la camera) e membro (cancella solo i propri messaggi, può invitare terzi). Da chiarire in fase di implementazione: camera orfana se il fondatore se ne va/elimina l'account; revoca di un invito non ancora accettato; limite di inviti per membro.
-- [ ] Retention automatica messaggi (30 giorni, come v1).
-- [ ] Tabella `translation_memory` (testo originale, lingua sorgente/destinazione, traduzione, servizio usato, timestamp, `corrected_by_user`) — confronto per corrispondenza esatta normalizzata (case/spazi), mai fuzzy; le entry `corrected_by_user: true` non vanno mai sovrascritte da una chiamata API; non salvare mai una traduzione tornata identica all'originale con lingue diverse.
+### Modello dati Supabase — rifinitura dopo l'applicazione
+- [ ] Verificare `create_room`/`accept_room_invite`/`revoke_room_invite` con dati reali (RLS, security definer) una volta applicata la migrazione.
+- [ ] Non ancora imposto un limite al numero di inviti che un membro può creare (`AAA3_room_invites`) — il documento lo lascia aperto; da decidere se/come applicarlo.
+- [ ] Job di pulizia per i file orfani nel bucket `room-photos` oltre i 30 giorni (gap noto: il job `pg_cron` di retention cancella solo le righe di `AAA3_chat_messages`, non i file storage — serve una Edge Function schedulata con service role, vedi commento nella migrazione).
 
 ### Autenticazione
 - [ ] Login/registrazione reali con `@supabase/supabase-js` (sostituire il placeholder in `src/features/auth`).
