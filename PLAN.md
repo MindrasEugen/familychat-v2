@@ -34,17 +34,31 @@ stato, non ripete le motivazioni).
 - **Verificato end-to-end in browser reale** (Chrome via claude-in-chrome) con un account di test: registrazione → completa profilo → `/rooms` con nav corretta (username + Esci) → logout → nuovo login → `/rooms` senza richiedere di nuovo il profilo. Account di test ripuliti dal DB dopo la verifica (cascade su `AAA3_profiles` confermato funzionante).
 - **Non ancora implementato**: "più account/gruppi collegati sullo stesso dispositivo contemporaneamente" (funzionalità richiesta nel documento) — il client Supabase attuale gestisce una sola sessione attiva per origine/browser. Supportare più profili loggati insieme richiede istanze client separate con `storageKey` distinti (o un meccanismo equivalente); non progettato in questo giro, va trattato come una decisione architetturale a parte prima di essere implementato.
 
+### 2026-09-05 — Icone riusate dalla v1
+- `public/icons/{icon-192,icon-512,apple-touch-icon}.png` copiate da `FamilyChat/icons` (stessi asset della v1), favicon/apple-touch-icon collegati in `index.html`. Manifest.json/PWA resta una decisione aperta (non toccata qui).
+
+### 2026-09-05 — Camere e inviti
+- `useRooms`/`useCreateRoom`/`useJoinRoom` (`src/features/rooms/useRooms.ts`): lista camere (RLS filtra già ai soli membri), creazione via RPC `create_room`, adesione via RPC `accept_room_invite`.
+- `useRoom`/`useRoomMembers` (`useRoomDetail.ts`) e `useRoomInvites`/`useCreateRoomInvite`/`useRevokeRoomInvite` (`useRoomInvites.ts`): dettaglio camera, elenco membri con username (embed su `AAA3_profiles`), generazione inviti (monouso di default, `max_uses: 1` — non specificato nel documento, scelta prudente da rivedere se serve un invito riutilizzabile) e revoca.
+- `RoomsListPage` e `RoomChatPage` (quest'ultima estesa oltre il placeholder: nome camera, badge fondatore, elenco membri, sezione inviti — la cronologia messaggi resta placeholder, è lavoro separato).
+- **Due bug reali trovati e corretti testando in browser con più account reali (fondatore + invitato + estraneo)**:
+  1. **Ricorsione infinita nelle policy RLS di `AAA3_room_members`** (Postgres 42P17): la policy `room_members_select_if_member` faceva un `EXISTS` sulla stessa tabella che la RLS protegge — valutare la subquery riattivava la policy stessa all'infinito. L'errore si propagava a catena a `AAA3_rooms`, `AAA3_room_invites`, `AAA3_chat_messages` e al bucket `room-photos`, che fanno tutte `EXISTS` su `room_members` nelle proprie policy. **Non individuabile da una revisione statica della SQL** (sintatticamente valida) — emerso solo eseguendo una query reale. Fix in `20260905091438_fix_room_members_rls_recursion.sql`: due funzioni `SECURITY DEFINER` (`is_room_member`, `is_room_founder`) che bypassano la RLS, usate ovunque al posto degli `EXISTS` diretti — pattern standard per i controlli di membership ricorsivi.
+  2. `useRoom` usava `.single()`, che genera un HTTP 406 quando RLS nasconde la riga a un non-membro (caso legittimo, non un errore) — la UI restava bloccata su "Caricamento…" a tempo indeterminato per un utente che visita l'URL di una camera di cui non fa parte. Corretto con `.maybeSingle()` (stesso pattern già usato in `useProfile`).
+- **Verificato end-to-end in browser reale con tre account** (fondatore, invitato, estraneo): crea camera → genera invito → un secondo account si unisce col codice → entrambi compaiono nella lista membri → un membro non autorizzato non riesce a revocare l'invito altrui (bloccato server-side) → il fondatore revoca con successo → un terzo account estraneo alla camera vede correttamente "Camera non trovata, o non ne fai parte" invece di restare bloccato. Account e camere di test ripuliti dal DB dopo la verifica (cascade confermato, incluso il vincolo `on delete restrict` su `founder_id` che ha correttamente impedito di cancellare l'utente fondatore prima della camera).
+
 ## Da fare
 
-Ripreso da `PROMPT_REACT_REWRITE.md` — nessuna riga di logica applicativa reale scritta oltre ai placeholder (lo schema DB è progettato ma non applicato, vedi sopra).
+Ripreso da `PROMPT_REACT_REWRITE.md`.
 
 ### Setup/manuale
 - [ ] `pnpm exec playwright install` (non eseguito nello scaffold per evitare un download pesante non richiesto) prima di poter lanciare `pnpm test:e2e`.
 - [ ] Decidere se serve ancora la PWA (service worker, manifest, `vite-plugin-pwa`) con l'architettura nuova — non dare per scontato solo perché la v1 la aveva.
 
-### Modello dati Supabase — rifinitura dopo l'applicazione
-- [ ] Verificare `create_room`/`accept_room_invite`/`revoke_room_invite` con dati reali (RLS, security definer) una volta applicata la migrazione.
+### Modello dati Supabase — rifinitura
+- [x] `create_room`/`accept_room_invite`/`revoke_room_invite` verificate con dati reali — vedi "Fatto" sopra (2026-09-05, incluso il fix della ricorsione RLS).
 - [ ] Non ancora imposto un limite al numero di inviti che un membro può creare (`AAA3_room_invites`) — il documento lo lascia aperto; da decidere se/come applicarlo.
+- [ ] Gestione membri: rimuovere un membro (il fondatore può farlo lato DB — policy già presente — ma manca l'azione in UI), lasciare una camera da membro.
+- [ ] Eliminazione camera da parte del fondatore (non ancora esposta in UI; la policy DB c'è già).
 - [ ] Job di pulizia per i file orfani nel bucket `room-photos` oltre i 30 giorni (gap noto: il job `pg_cron` di retention cancella solo le righe di `AAA3_chat_messages`, non i file storage — serve una Edge Function schedulata con service role, vedi commento nella migrazione).
 
 ### Autenticazione
