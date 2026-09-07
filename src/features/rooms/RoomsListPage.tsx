@@ -1,7 +1,36 @@
 import { useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuthStatus } from '../auth/useAuthStatus'
+import { useDisablePush, useEnablePush, usePushSubscriptionStatus } from '../notifications/usePushSubscription'
 import { useCreateRoom, useJoinRoom, useRooms } from './useRooms'
+
+function PushToggle({ userId }: { userId: string | undefined }) {
+  const statusQuery = usePushSubscriptionStatus()
+  const enablePush = useEnablePush(userId)
+  const disablePush = useDisablePush()
+
+  if (statusQuery.data === 'unsupported' || !statusQuery.data) return null
+
+  if (statusQuery.data === 'subscribed') {
+    return (
+      <p>
+        <button type="button" onClick={() => disablePush.mutate()} disabled={disablePush.isPending}>
+          Disattiva notifiche push
+        </button>
+        {disablePush.isError && <span role="alert"> {disablePush.error.message}</span>}
+      </p>
+    )
+  }
+
+  return (
+    <p>
+      <button type="button" onClick={() => enablePush.mutate()} disabled={enablePush.isPending}>
+        Attiva notifiche push
+      </button>
+      {enablePush.isError && <span role="alert"> {enablePush.error.message}</span>}
+    </p>
+  )
+}
 
 export function RoomsListPage() {
   const { session } = useAuthStatus()
@@ -31,6 +60,8 @@ export function RoomsListPage() {
   return (
     <section>
       <h1>Le tue camere</h1>
+
+      <PushToggle userId={userId} />
 
       {roomsQuery.isPending && <p>Caricamento…</p>}
       {roomsQuery.isError && <p role="alert">Errore nel caricamento delle camere.</p>}

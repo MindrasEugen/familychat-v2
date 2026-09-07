@@ -129,6 +129,41 @@ export type Database = {
         }
         Relationships: []
       }
+      AAA3_push_subscriptions: {
+        Row: {
+          auth: string
+          created_at: string
+          endpoint: string
+          id: string
+          p256dh: string
+          user_id: string
+        }
+        Insert: {
+          auth: string
+          created_at?: string
+          endpoint: string
+          id?: string
+          p256dh: string
+          user_id: string
+        }
+        Update: {
+          auth?: string
+          created_at?: string
+          endpoint?: string
+          id?: string
+          p256dh?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "AAA3_push_subscriptions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "AAA3_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       AAA3_room_invites: {
         Row: {
           code: string
@@ -411,6 +446,8 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      is_room_founder: { Args: { p_room_id: string }; Returns: boolean }
+      is_room_member: { Args: { p_room_id: string }; Returns: boolean }
       revoke_room_invite: { Args: { invite_id: string }; Returns: undefined }
     }
     Enums: {

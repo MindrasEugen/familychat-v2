@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useAuthStatus } from '../auth/useAuthStatus'
+import { useDismissRoomNotifications } from '../notifications/usePushSubscription'
 import { useDeleteRoom, useLeaveRoom, useRemoveMember, useRoom, useRoomMembers } from '../rooms/useRoomDetail'
 import { useCreateRoomInvite, useRevokeRoomInvite, useRoomInvites } from '../rooms/useRoomInvites'
 import { MessageComposer } from './MessageComposer'
@@ -53,6 +54,7 @@ export function RoomChatPage() {
   const removeMember = useRemoveMember(roomId)
   const deleteRoom = useDeleteRoom(userId)
   useRoomMessagesRealtime(roomId)
+  useDismissRoomNotifications(roomId)
 
   const usernamesById = useMemo(() => {
     const map = new Map<string, string>()

@@ -6,6 +6,7 @@ import { LoginPage } from './features/auth/LoginPage'
 import { ResetPasswordPage } from './features/auth/ResetPasswordPage'
 import { GuestOnly, RequireAuth, RequirePasswordRecovery, RequireSessionNoProfile } from './features/auth/routeGuards'
 import { initSessionListener } from './features/auth/sessionStore'
+import { registerServiceWorker } from './lib/registerServiceWorker'
 import { useAuthStatus } from './features/auth/useAuthStatus'
 import { RoomChatPage } from './features/chat/RoomChatPage'
 import { RoomsListPage } from './features/rooms/RoomsListPage'
@@ -96,6 +97,7 @@ function AppLayout() {
 
 function App() {
   useEffect(() => initSessionListener(), [])
+  useEffect(() => registerServiceWorker(), [])
 
   return (
     <QueryClientProvider client={queryClient}>
