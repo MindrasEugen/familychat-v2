@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { PostgrestError } from '@supabase/supabase-js'
 import { supabase } from '../../lib/supabaseClient'
 import type { Database } from '../../lib/database.types'
-import { compressImage } from './imageCompression'
+import { compressImage } from '../../lib/imageCompression'
 
 const PHOTO_BUCKET = 'room-photos'
 export const MESSAGES_PAGE_SIZE = 100

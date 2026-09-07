@@ -20,6 +20,9 @@ function NavAuthStatus() {
 
   return (
     <span>
+      {profile?.avatar_url && (
+        <img src={profile.avatar_url} alt="" style={{ width: 24, height: 24, borderRadius: '50%' }} />
+      )}{' '}
       {profile?.username}{' '}
       <button type="button" onClick={() => supabase.auth.signOut()}>
         Esci

@@ -101,6 +101,13 @@ export function RoomChatPage() {
         <ul>
           {membersQuery.data.map((member) => (
             <li key={member.user_id}>
+              {member.AAA3_profiles?.avatar_url && (
+                <img
+                  src={member.AAA3_profiles.avatar_url}
+                  alt=""
+                  style={{ width: 24, height: 24, borderRadius: '50%' }}
+                />
+              )}{' '}
               {member.AAA3_profiles?.username ?? '(profilo sconosciuto)'} — {member.role}
               {isFounder && member.user_id !== userId && (
                 <button

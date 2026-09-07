@@ -83,6 +83,13 @@ stato, non ripete le motivazioni).
 - **Azione richiesta all'utente prima che il flusso sia utilizzabile**: aggiungere `http://localhost:5173/reset-password` (e l'equivalente dominio di produzione, quando esisterà) alle Redirect URLs del progetto Supabase (`qamvkevkddfwyxhbftoy`) da Dashboard → Authentication → URL Configuration. Il codice applicativo è verificato corretto fino a quel punto (guardie, stato, pagina) — l'unico anello mancante è questa configurazione esterna.
 - Account di test ripulito dal DB reale dopo la verifica.
 
+### 2026-09-07 — Upload foto profilo
+- Nuovo bucket storage `profile-photos` (migrazione `20260907190000_profile_photos_bucket.sql`), **pubblico** — scelta deliberata e diversa da `room-photos`: `AAA3_profiles` ha già la policy `profiles_select_all` (`using (true)`), qualunque utente autenticato può leggere qualunque profilo, quindi non ha senso restringere la foto dietro un signed URL. `avatar_url` salva l'URL pubblico completo (non un path, a differenza di `image_path` su `AAA3_chat_messages`).
+- `src/lib/imageCompression.ts`: la cascata di compressione HEIC, prima specifica della chat, spostata da `features/chat/` a `lib/` (utility generica, riusata qui identica per gli avatar — stesso fallback al file originale se la compressione fallisce).
+- `useCompleteProfile` (in `useProfile.ts`) accetta ora `{ username, avatarFile }`; `CompleteProfilePage.tsx` ha un input file opzionale con anteprima. Avatar mostrato in nav (`App.tsx`) e nella lista membri di una camera (`RoomChatPage.tsx`, la select già includeva `avatar_url`).
+- **Bug reale trovato e corretto durante la verifica, non durante la scrittura**: la migrazione iniziale del bucket copriva insert/update/delete ma non select su `storage.objects` — per un bucket pubblico il download via URL pubblico bypassa comunque RLS, quindi sembrava non necessaria, ma la Storage API autenticata (usata per `remove`/liste) deve prima *vedere* la riga tramite una query soggetta a RLS: senza policy SELECT, un utente non sarebbe mai riuscito a cancellare/sostituire la propria foto — fallimento silenzioso (`remove` ritorna un array vuoto, nessun errore). Scoperto ripulendo un file di test, non da un utente reale, ma il bug avrebbe colpito chiunque. Corretto con una seconda migrazione (`20260907190500_profile_photos_select_policy.sql`), riverificato che il `remove` funzioni dopo il fix.
+- **Verificato end-to-end in browser reale**: upload durante la registrazione (anteprima corretta, compressione riuscita — file caricato come `.jpg`), avatar visibile e caricato correttamente (192×192) sia in nav sia nella lista membri di una camera. Verificato anche via script diretto contro il backend reale che l'URL pubblico è raggiungibile senza autenticazione (status 200). Account, camera e file storage di test ripuliti dal DB reale.
+
 ## Da fare
 
 Ripreso da `PROMPT_REACT_REWRITE.md`.
@@ -102,7 +109,7 @@ Ripreso da `PROMPT_REACT_REWRITE.md`.
 - [ ] Più account/camere collegati sullo stesso dispositivo contemporaneamente — richiede istanze client Supabase separate (storageKey distinti) o meccanismo equivalente; da progettare come decisione a sé, non ancora affrontata.
 - [ ] Gestione esplicita dei casi limite di sessione/realtime: telefono in background a lungo, rete che cade e torna, riapertura da notifica push (lezione 2) — verificare/ricreare un canale realtime solo se non è più vivo, non ad ogni evento di foreground (lezione 10, seconda parte).
 - [x] Recupero password ("password dimenticata") — implementato e verificato lato codice, vedi "Fatto" sopra (2026-09-07). **Bloccato in pratica finché l'utente non aggiunge `http://localhost:5173/reset-password` alle Redirect URLs del progetto Supabase da Dashboard** (nessuno strumento disponibile può farlo da qui).
-- [ ] Upload foto profilo (colonna `avatar_url` già pronta in `AAA3_profiles`, ma manca un bucket storage dedicato e l'UI di upload — non incluso in questo giro, solo lo username).
+- [x] Upload foto profilo — vedi "Fatto" sopra (2026-09-07).
 
 ### Chat
 - [x] Cronologia messaggi (testo) con TanStack Query, merge per id, realtime — vedi "Fatto" sopra (2026-09-05).
