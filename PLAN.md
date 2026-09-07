@@ -69,6 +69,11 @@ stato, non ripete le motivazioni).
 - **Tentata delega a Nova (deepseek-worker), esito "da rifare"**: codice non compilabile (7 errori TypeScript, firma componente e navigazione divergenti dalla specifica) e — trovato solo rileggendo il diff a mano, non dal report del subagente — due regressioni silenziose fuori scope in file che il task non chiedeva di toccare: `useRoom` riportato da `.maybeSingle()` a `.single()` (bug HTTP 406 già corretto in passato) e `useRoomMembers` con tabella/colonna inventate (`profiles(full_name)` invece di `AAA3_profiles(username)`). Modifiche scartate, task rifatto da zero direttamente da Claude. Dettaglio completo in `failures.md`.
 - **Verificato end-to-end in browser reale con due account** (fondatore + membro): un membro genera/usa un invito, entra nella camera; il fondatore rimuove il membro (sparisce dalla lista); il membro rientra con un nuovo invito ed esce da sé (redirect a `/rooms`, camera sparita dalla sua lista, sparito anche dalla lista membri del fondatore); il fondatore elimina la camera (redirect a `/rooms`, camera sparita). Verificato anche che il fondatore non vede mai "Esci dalla camera" e un membro non-fondatore non vede mai "Rimuovi"/"Elimina camera". Account e camera di test ripuliti dal DB reale dopo la verifica.
 
+### 2026-09-07 — Paginazione cronologia messaggi
+- `useMessages.ts`: nuovo hook `useLoadOlderMessages(roomId)` — riusa esattamente il pattern fetch+merge già esistente (mai una sostituzione grezza della cache), fetcha la pagina precedente a quella più vecchia già in cache (`created_at < oldest.created_at`) e la unisce con `mergeMessages`. `RoomChatPage.tsx`: pulsante "Carica messaggi precedenti" sopra la lista, sparisce (mostrando "Inizio della cronologia") quando una pagina restituisce meno di `MESSAGES_PAGE_SIZE` (100) risultati.
+- Gestito direttamente da Claude (non delegato): tocca l'invariante di merge della lezione 10, serviva ragionamento diretto sulla cache più che una specifica meccanica.
+- **Verificato end-to-end in browser reale**: 120 messaggi inseriti via SQL diretto in una camera di test, confermato che il fetch iniziale mostra solo gli ultimi 100 (dal #21), che "Carica messaggi precedenti" recupera i restanti 20 (#1-#20) senza duplicati né perdite, che il pulsante sparisce correttamente a fine cronologia, e che l'invio di un nuovo messaggio dopo il caricamento della pagina precedente continua a funzionare senza rompere la lista (invariante lezione 10 intatto). Account, camera e messaggi di test ripuliti dal DB reale dopo la verifica.
+
 ## Da fare
 
 Ripreso da `PROMPT_REACT_REWRITE.md`.
@@ -94,7 +99,7 @@ Ripreso da `PROMPT_REACT_REWRITE.md`.
 - [x] Cronologia messaggi (testo) con TanStack Query, merge per id, realtime — vedi "Fatto" sopra (2026-09-05).
 - [x] Invio foto — vedi "Fatto" sopra (2026-09-07). Resta da testare un vero file HEIC (nessun campione disponibile finora).
 - [x] Cancellazione messaggi da UI — vedi "Fatto" sopra (2026-09-07).
-- [ ] Paginazione/caricamento cronologia oltre gli ultimi 100 messaggi.
+- [x] Paginazione/caricamento cronologia oltre gli ultimi 100 messaggi — vedi "Fatto" sopra (2026-09-07).
 - [ ] Traduzione automatica inline nella lingua di chi legge.
 - [ ] Correzione traduzione dalla chat (tocco lungo → "Correggi traduzione") che aggiorna `translation_memory`.
 

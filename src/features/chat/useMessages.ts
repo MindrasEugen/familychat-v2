@@ -6,6 +6,7 @@ import type { Database } from '../../lib/database.types'
 import { compressImage } from './imageCompression'
 
 const PHOTO_BUCKET = 'room-photos'
+export const MESSAGES_PAGE_SIZE = 100
 
 function fileExtension(file: File): string {
   const match = /\.([a-zA-Z0-9]+)$/.exec(file.name)
@@ -41,7 +42,7 @@ export function useMessages(roomId: string | undefined) {
         .select('*')
         .eq('room_id', roomId as string)
         .order('created_at', { ascending: false })
-        .limit(100)
+        .limit(MESSAGES_PAGE_SIZE)
 
       if (error) throw error
 
@@ -54,6 +55,42 @@ export function useMessages(roomId: string | undefined) {
       return mergeMessages(current, fetched)
     },
     enabled: Boolean(roomId),
+  })
+}
+
+// Carica la pagina di messaggi precedente a quella già in cache — stesso
+// pattern fetch+merge del resto del file (mai una sostituzione grezza),
+// così una pagina più vecchia si somma alla lista già in uso da realtime
+// invece di rientrare in conflitto con essa (lezione 10). Ritorna il numero
+// di messaggi trovati: il chiamante lo usa per capire se la cronologia è
+// finita (meno di una pagina piena = non ce ne sono altri prima).
+export function useLoadOlderMessages(roomId: string | undefined) {
+  const queryClient = useQueryClient()
+
+  return useMutation<number, PostgrestError | Error, void>({
+    mutationFn: async () => {
+      if (!roomId) throw new Error('Camera non disponibile.')
+
+      const current = queryClient.getQueryData<Message[]>(messagesQueryKey(roomId)) ?? []
+      const oldest = current[0]
+      if (!oldest) return 0
+
+      const { data, error } = await supabase
+        .from('AAA3_chat_messages')
+        .select('*')
+        .eq('room_id', roomId)
+        .lt('created_at', oldest.created_at)
+        .order('created_at', { ascending: false })
+        .limit(MESSAGES_PAGE_SIZE)
+
+      if (error) throw error
+
+      const fetched = [...data].reverse()
+      queryClient.setQueryData<Message[]>(messagesQueryKey(roomId), (old) =>
+        mergeMessages(old ?? [], fetched),
+      )
+      return fetched.length
+    },
   })
 }
 

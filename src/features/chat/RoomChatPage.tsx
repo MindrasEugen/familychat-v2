@@ -1,11 +1,11 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useAuthStatus } from '../auth/useAuthStatus'
 import { useDeleteRoom, useLeaveRoom, useRemoveMember, useRoom, useRoomMembers } from '../rooms/useRoomDetail'
 import { useCreateRoomInvite, useRevokeRoomInvite, useRoomInvites } from '../rooms/useRoomInvites'
 import { MessageComposer } from './MessageComposer'
 import { MessageList } from './MessageList'
-import { useMessages, useRoomMessagesRealtime } from './useMessages'
+import { MESSAGES_PAGE_SIZE, useLoadOlderMessages, useMessages, useRoomMessagesRealtime } from './useMessages'
 
 function InviteList({ roomId }: { roomId: string }) {
   const invitesQuery = useRoomInvites(roomId)
@@ -47,6 +47,8 @@ export function RoomChatPage() {
   const membersQuery = useRoomMembers(roomId)
   const createInvite = useCreateRoomInvite(roomId, userId)
   const messagesQuery = useMessages(roomId)
+  const loadOlderMessages = useLoadOlderMessages(roomId)
+  const [noMoreOlderMessages, setNoMoreOlderMessages] = useState(false)
   const leaveRoom = useLeaveRoom(roomId, userId)
   const removeMember = useRemoveMember(roomId)
   const deleteRoom = useDeleteRoom(userId)
@@ -132,6 +134,23 @@ export function RoomChatPage() {
       <h2>Messaggi</h2>
       {messagesQuery.isPending && <p>Caricamento…</p>}
       {messagesQuery.isError && <p role="alert">Errore nel caricamento dei messaggi.</p>}
+      {messagesQuery.data && messagesQuery.data.length > 0 && !noMoreOlderMessages && (
+        <button
+          type="button"
+          onClick={() =>
+            loadOlderMessages.mutate(undefined, {
+              onSuccess: (fetchedCount) => {
+                if (fetchedCount < MESSAGES_PAGE_SIZE) setNoMoreOlderMessages(true)
+              },
+            })
+          }
+          disabled={loadOlderMessages.isPending}
+        >
+          Carica messaggi precedenti
+        </button>
+      )}
+      {loadOlderMessages.isError && <p role="alert">{loadOlderMessages.error.message}</p>}
+      {noMoreOlderMessages && <p>Inizio della cronologia.</p>}
       {messagesQuery.data && (
         <MessageList
           messages={messagesQuery.data}
