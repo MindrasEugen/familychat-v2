@@ -59,6 +59,11 @@ stato, non ripete le motivazioni).
 - **Non verificato**: un vero file HEIC (nessun campione disponibile in questo giro) — testato solo il percorso PNG→JPEG via `createImageBitmap` (prima strategia della cascata, completata con successo in entrambi i test, mai serviti i fallback).
 - **Nota di processo — delega**: tentata prima delega a Vibe (mistral-worker), bloccata a livello Windows (stesso blocco isolato lo stesso giorno su un altro progetto, non il classificatore Claude Code — vedi `failures.md`). Ridelegato a Codex (codex-worker): il subagente ha chiuso il turno con un report vago di falso-completamento mentre `codex.exe` era ancora realmente in esecuzione (~23 min, nessun file scritto) — su richiesta dell'utente il processo è stato terminato prima di un esito naturale e il task è stato implementato direttamente da Claude, poi verificato come sopra. Vedi `failures.md` per il dettaglio di entrambi gli incidenti.
 
+### 2026-09-07 — Cancellazione messaggi da UI
+- `useMessages.ts`: nuovo hook `useDeleteMessage(roomId)` — cancella la riga in `AAA3_chat_messages` (policy `chat_messages_delete_own_or_founder` già esistente) e, se il messaggio aveva una foto, rimuove il file da `room-photos` in modo best-effort (un fallimento sulla seconda operazione non fa fallire la cancellazione del messaggio).
+- `MessageList.tsx`: pulsante "Elimina" per messaggio, visibile solo se proprio messaggio o se si è fondatore; nessun dialogo di conferma (coerente con lo stile del resto del progetto). `RoomChatPage.tsx`: passa `isFounder`/`roomId` a `MessageList`.
+- Delegato a Nova (deepseek-worker) — primo task completato con successo da Nova su questo progetto. **Verificato end-to-end in browser reale** (nuovo account di test): eliminazione di un messaggio di solo testo e di uno con foto, entrambi spariscono correttamente dalla UI; confermato via query diretta che il file storage associato viene davvero rimosso dal bucket (non solo la riga DB). Account e camera di test ripuliti dal DB reale dopo la verifica.
+
 ## Da fare
 
 Ripreso da `PROMPT_REACT_REWRITE.md`.
@@ -84,7 +89,7 @@ Ripreso da `PROMPT_REACT_REWRITE.md`.
 ### Chat
 - [x] Cronologia messaggi (testo) con TanStack Query, merge per id, realtime — vedi "Fatto" sopra (2026-09-05).
 - [x] Invio foto — vedi "Fatto" sopra (2026-09-07). Resta da testare un vero file HEIC (nessun campione disponibile finora).
-- [ ] Cancellazione messaggi da UI (proprio messaggio, o qualunque messaggio se fondatore — policy DB già presenti).
+- [x] Cancellazione messaggi da UI — vedi "Fatto" sopra (2026-09-07).
 - [ ] Paginazione/caricamento cronologia oltre gli ultimi 100 messaggi.
 - [ ] Traduzione automatica inline nella lingua di chi legge.
 - [ ] Correzione traduzione dalla chat (tocco lungo → "Correggi traduzione") che aggiorna `translation_memory`.

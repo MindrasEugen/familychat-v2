@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabaseClient'
 import type { Database } from '../../lib/database.types'
+import { useDeleteMessage } from './useMessages'
 
 type Message = Database['public']['Tables']['AAA3_chat_messages']['Row']
 
@@ -32,11 +33,17 @@ export function MessageList({
   messages,
   usernamesById,
   currentUserId,
+  isFounder,
+  roomId,
 }: {
   messages: Message[]
   usernamesById: Map<string, string>
   currentUserId: string | undefined
+  isFounder: boolean
+  roomId: string | undefined
 }) {
+  const deleteMessage = useDeleteMessage(roomId)
+
   if (messages.length === 0) {
     return <p>Nessun messaggio ancora — scrivi il primo.</p>
   }
@@ -52,6 +59,21 @@ export function MessageList({
           </strong>
           {message.body && <>: {message.body}</>}
           {message.image_path && <MessageImage imagePath={message.image_path} />}
+          {(message.sender_id === currentUserId || isFounder) && (
+            <button
+              type="button"
+              onClick={() =>
+                deleteMessage.mutate({
+                  id: message.id,
+                  imagePath: message.image_path,
+                })
+              }
+              disabled={deleteMessage.isPending}
+              style={{ marginLeft: '0.5em' }}
+            >
+              Elimina
+            </button>
+          )}
         </li>
       ))}
     </ul>

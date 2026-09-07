@@ -142,3 +142,31 @@ export function useSendMessage(roomId: string | undefined, userId: string | unde
     },
   })
 }
+
+export function useDeleteMessage(roomId: string | undefined) {
+  const queryClient = useQueryClient()
+
+  return useMutation<void, PostgrestError | Error, { id: string; imagePath: string | null }>({
+    mutationFn: async ({ id, imagePath }) => {
+      if (!roomId) throw new Error('Camera non disponibile.')
+
+      const { error } = await supabase.from('AAA3_chat_messages').delete().eq('id', id)
+
+      if (error) throw error
+
+      // Best-effort: prova a rimuovere il file associato, ma non bloccare se
+      // fallisce — la riga in DB è comunque cancellata correttamente.
+      if (imagePath) {
+        await supabase.storage.from(PHOTO_BUCKET).remove([imagePath]).catch(() => {})
+      }
+    },
+    onSuccess: (_, { id }) => {
+      // Rimuovi il messaggio dalla cache per reattività immediata — il
+      // realtime farà comunque lo stesso filtro poco dopo, ma il merge
+      // per id lo rende un no-op innocuo.
+      queryClient.setQueryData<Message[]>(messagesQueryKey(roomId), (old) =>
+        (old ?? []).filter((message) => message.id !== id),
+      )
+    },
+  })
+}

@@ -103,6 +103,8 @@ export function RoomChatPage() {
           messages={messagesQuery.data}
           usernamesById={usernamesById}
           currentUserId={userId}
+          isFounder={isFounder}
+          roomId={roomId}
         />
       )}
       <MessageComposer roomId={roomId} userId={userId} />
