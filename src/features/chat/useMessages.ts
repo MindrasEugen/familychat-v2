@@ -3,6 +3,14 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { PostgrestError } from '@supabase/supabase-js'
 import { supabase } from '../../lib/supabaseClient'
 import type { Database } from '../../lib/database.types'
+import { compressImage } from './imageCompression'
+
+const PHOTO_BUCKET = 'room-photos'
+
+function fileExtension(file: File): string {
+  const match = /\.([a-zA-Z0-9]+)$/.exec(file.name)
+  return match ? match[1].toLowerCase() : 'bin'
+}
 
 type Message = Database['public']['Tables']['AAA3_chat_messages']['Row']
 
@@ -94,13 +102,31 @@ export function useRoomMessagesRealtime(roomId: string | undefined) {
 export function useSendMessage(roomId: string | undefined, userId: string | undefined) {
   const queryClient = useQueryClient()
 
-  return useMutation<Message, PostgrestError | Error, string>({
-    mutationFn: async (body: string) => {
+  return useMutation<Message, PostgrestError | Error, { body: string; imageFile: File | null }>({
+    mutationFn: async ({ body, imageFile }) => {
       if (!roomId || !userId) throw new Error('Camera o utente non disponibili.')
+
+      let imagePath: string | null = null
+      if (imageFile) {
+        // Se la compressione fallisce su tutte le strategie, carichiamo il
+        // file originale così com'è invece di bloccare l'invio (lezione 5):
+        // il messaggio deve arrivare comunque.
+        const compressed = await compressImage(imageFile)
+        const toUpload = compressed ?? imageFile
+        const ext = compressed ? 'jpg' : fileExtension(imageFile)
+        const contentType = compressed ? 'image/jpeg' : imageFile.type || 'application/octet-stream'
+        // Path "<room_id>/<file>": le policy RLS sul bucket leggono il primo
+        // segmento come room_id per verificare l'appartenenza alla camera.
+        imagePath = `${roomId}/${crypto.randomUUID()}.${ext}`
+        const { error: uploadError } = await supabase.storage
+          .from(PHOTO_BUCKET)
+          .upload(imagePath, toUpload, { contentType })
+        if (uploadError) throw uploadError
+      }
 
       const { data, error } = await supabase
         .from('AAA3_chat_messages')
-        .insert({ room_id: roomId, sender_id: userId, body })
+        .insert({ room_id: roomId, sender_id: userId, body: body.trim() || null, image_path: imagePath })
         .select()
         .single()
 

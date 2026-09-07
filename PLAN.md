@@ -52,6 +52,13 @@ stato, non ripete le motivazioni).
 - **Verificato end-to-end in browser reale**: un messaggio inserito da un secondo utente **via chiamata API diretta** (non dal browser) compare nella UI aperta senza ricaricare la pagina (realtime INSERT); un messaggio inviato dal browser stesso compare una sola volta nonostante arrivi sia dalla risposta della mutation sia dall'eco realtime (merge per id verificato, non solo teorico); un messaggio cancellato via SQL sparisce dalla UI aperta senza reload (realtime DELETE). Dati di test ripuliti dal DB dopo la verifica.
 - **Non incluso in questo giro** (solo testo): invio foto (serve la cascata HEIC — lezione 5 — e il bucket `room-photos` già pronto ma non ancora collegato), traduzione automatica inline, correzione traduzione, cancellazione messaggi da UI (le policy DB ci sono già), paginazione oltre gli ultimi 100 messaggi.
 
+### 2026-09-07 — Invio foto in chat
+- `src/features/chat/imageCompression.ts` (nuovo): cascata di compressione a 3 livelli portata da v1 (`createImageBitmap` → `<img>`+canvas → `heic2any` con import dinamico lazy e timeout 6s) — ridimensiona a 1600px/JPEG q0.8, fallback al file originale se tutte le strategie falliscono (mai bloccare l'invio, lezione 5).
+- `useMessages.ts` (`useSendMessage`): accetta ora `{ body, imageFile }`, carica la foto su `room-photos` con path `<room_id>/<uuid>.<ext>` prima dell'insert; `MessageComposer.tsx`: input file + anteprima + submit permesso anche con sola foto; `MessageList.tsx`: nuovo sotto-componente `MessageImage` che risolve un signed URL (bucket privato, mai `getPublicUrl`) isolando eventuali fallimenti per singola immagine.
+- **Verificato end-to-end in browser reale** (Chrome via claude-in-chrome) con un account di test: messaggio solo testo (non regressione), messaggio solo foto (case limite: body vuoto correttamente salvato come `null`, nessuna riga di testo vuota in UI), messaggio testo+foto insieme — tutti e tre visibili correttamente, foto ricaricate con successo anche dopo un refresh completo della pagina (signed URL rigenerato). Nessun errore/warning in console. Account, camera, messaggi e file storage di test ripuliti dal DB reale dopo la verifica (cascade su `AAA3_rooms`→`AAA3_room_members`/`AAA3_chat_messages` confermato, storage object rimossi via client autenticato prima di cancellare la camera).
+- **Non verificato**: un vero file HEIC (nessun campione disponibile in questo giro) — testato solo il percorso PNG→JPEG via `createImageBitmap` (prima strategia della cascata, completata con successo in entrambi i test, mai serviti i fallback).
+- **Nota di processo — delega**: tentata prima delega a Vibe (mistral-worker), bloccata a livello Windows (stesso blocco isolato lo stesso giorno su un altro progetto, non il classificatore Claude Code — vedi `failures.md`). Ridelegato a Codex (codex-worker): il subagente ha chiuso il turno con un report vago di falso-completamento mentre `codex.exe` era ancora realmente in esecuzione (~23 min, nessun file scritto) — su richiesta dell'utente il processo è stato terminato prima di un esito naturale e il task è stato implementato direttamente da Claude, poi verificato come sopra. Vedi `failures.md` per il dettaglio di entrambi gli incidenti.
+
 ## Da fare
 
 Ripreso da `PROMPT_REACT_REWRITE.md`.
@@ -76,7 +83,7 @@ Ripreso da `PROMPT_REACT_REWRITE.md`.
 
 ### Chat
 - [x] Cronologia messaggi (testo) con TanStack Query, merge per id, realtime — vedi "Fatto" sopra (2026-09-05).
-- [ ] Invio foto, con la stessa cascata di decodifica HEIC della v1 (`createImageBitmap` → `<img>` → `heic2any` con timeout) e un fallback esplicito se la decodifica fallisce (lezione 5) — il bucket `room-photos` esiste già.
+- [x] Invio foto — vedi "Fatto" sopra (2026-09-07). Resta da testare un vero file HEIC (nessun campione disponibile finora).
 - [ ] Cancellazione messaggi da UI (proprio messaggio, o qualunque messaggio se fondatore — policy DB già presenti).
 - [ ] Paginazione/caricamento cronologia oltre gli ultimi 100 messaggi.
 - [ ] Traduzione automatica inline nella lingua di chi legge.
