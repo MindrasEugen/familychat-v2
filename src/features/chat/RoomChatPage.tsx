@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
-import { useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { useAuthStatus } from '../auth/useAuthStatus'
-import { useRoom, useRoomMembers } from '../rooms/useRoomDetail'
+import { useDeleteRoom, useLeaveRoom, useRemoveMember, useRoom, useRoomMembers } from '../rooms/useRoomDetail'
 import { useCreateRoomInvite, useRevokeRoomInvite, useRoomInvites } from '../rooms/useRoomInvites'
 import { MessageComposer } from './MessageComposer'
 import { MessageList } from './MessageList'
@@ -41,11 +41,15 @@ export function RoomChatPage() {
   const { roomId } = useParams<{ roomId: string }>()
   const { session } = useAuthStatus()
   const userId = session?.user.id
+  const navigate = useNavigate()
 
   const roomQuery = useRoom(roomId)
   const membersQuery = useRoomMembers(roomId)
   const createInvite = useCreateRoomInvite(roomId, userId)
   const messagesQuery = useMessages(roomId)
+  const leaveRoom = useLeaveRoom(roomId, userId)
+  const removeMember = useRemoveMember(roomId)
+  const deleteRoom = useDeleteRoom(userId)
   useRoomMessagesRealtime(roomId)
 
   const usernamesById = useMemo(() => {
@@ -68,6 +72,26 @@ export function RoomChatPage() {
       <h1>{roomQuery.data.name}</h1>
       {isFounder && <p>Sei il fondatore di questa camera.</p>}
 
+      {isFounder ? (
+        <button
+          type="button"
+          onClick={() => deleteRoom.mutate(roomId as string, { onSuccess: () => navigate('/rooms') })}
+          disabled={deleteRoom.isPending}
+        >
+          Elimina camera
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={() => leaveRoom.mutate(undefined, { onSuccess: () => navigate('/rooms') })}
+          disabled={leaveRoom.isPending}
+        >
+          Esci dalla camera
+        </button>
+      )}
+      {deleteRoom.isError && <p role="alert">{deleteRoom.error.message}</p>}
+      {leaveRoom.isError && <p role="alert">{leaveRoom.error.message}</p>}
+
       <h2>Membri</h2>
       {membersQuery.isPending && <p>Caricamento…</p>}
       {membersQuery.isError && <p role="alert">Errore nel caricamento dei membri.</p>}
@@ -76,10 +100,20 @@ export function RoomChatPage() {
           {membersQuery.data.map((member) => (
             <li key={member.user_id}>
               {member.AAA3_profiles?.username ?? '(profilo sconosciuto)'} — {member.role}
+              {isFounder && member.user_id !== userId && (
+                <button
+                  type="button"
+                  onClick={() => removeMember.mutate(member.user_id)}
+                  disabled={removeMember.isPending}
+                >
+                  Rimuovi
+                </button>
+              )}
             </li>
           ))}
         </ul>
       )}
+      {removeMember.isError && <p role="alert">{removeMember.error.message}</p>}
 
       <h2>Inviti</h2>
       <button type="button" onClick={() => createInvite.mutate()} disabled={createInvite.isPending}>

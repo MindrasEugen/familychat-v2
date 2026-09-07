@@ -64,6 +64,11 @@ stato, non ripete le motivazioni).
 - `MessageList.tsx`: pulsante "Elimina" per messaggio, visibile solo se proprio messaggio o se si è fondatore; nessun dialogo di conferma (coerente con lo stile del resto del progetto). `RoomChatPage.tsx`: passa `isFounder`/`roomId` a `MessageList`.
 - Delegato a Nova (deepseek-worker) — primo task completato con successo da Nova su questo progetto. **Verificato end-to-end in browser reale** (nuovo account di test): eliminazione di un messaggio di solo testo e di uno con foto, entrambi spariscono correttamente dalla UI; confermato via query diretta che il file storage associato viene davvero rimosso dal bucket (non solo la riga DB). Account e camera di test ripuliti dal DB reale dopo la verifica.
 
+### 2026-09-07 — Gestione membri e camera (lascia/rimuovi/elimina)
+- `useRoomDetail.ts`: nuovi hook `useLeaveRoom`/`useRemoveMember`/`useDeleteRoom`, stesso stile mutation di `useRooms.ts` (invalidano `roomMembersQueryKey`/`roomsQueryKey` a seconda dei casi). `RoomChatPage.tsx`: pulsante "Rimuovi" per membro (solo fondatore, non su sé stesso), "Esci dalla camera" (solo non-fondatore) o "Elimina camera" (solo fondatore) con redirect a `/rooms` via `useNavigate` dopo successo.
+- **Tentata delega a Nova (deepseek-worker), esito "da rifare"**: codice non compilabile (7 errori TypeScript, firma componente e navigazione divergenti dalla specifica) e — trovato solo rileggendo il diff a mano, non dal report del subagente — due regressioni silenziose fuori scope in file che il task non chiedeva di toccare: `useRoom` riportato da `.maybeSingle()` a `.single()` (bug HTTP 406 già corretto in passato) e `useRoomMembers` con tabella/colonna inventate (`profiles(full_name)` invece di `AAA3_profiles(username)`). Modifiche scartate, task rifatto da zero direttamente da Claude. Dettaglio completo in `failures.md`.
+- **Verificato end-to-end in browser reale con due account** (fondatore + membro): un membro genera/usa un invito, entra nella camera; il fondatore rimuove il membro (sparisce dalla lista); il membro rientra con un nuovo invito ed esce da sé (redirect a `/rooms`, camera sparita dalla sua lista, sparito anche dalla lista membri del fondatore); il fondatore elimina la camera (redirect a `/rooms`, camera sparita). Verificato anche che il fondatore non vede mai "Esci dalla camera" e un membro non-fondatore non vede mai "Rimuovi"/"Elimina camera". Account e camera di test ripuliti dal DB reale dopo la verifica.
+
 ## Da fare
 
 Ripreso da `PROMPT_REACT_REWRITE.md`.
@@ -75,8 +80,7 @@ Ripreso da `PROMPT_REACT_REWRITE.md`.
 ### Modello dati Supabase — rifinitura
 - [x] `create_room`/`accept_room_invite`/`revoke_room_invite` verificate con dati reali — vedi "Fatto" sopra (2026-09-05, incluso il fix della ricorsione RLS).
 - [ ] Non ancora imposto un limite al numero di inviti che un membro può creare (`AAA3_room_invites`) — il documento lo lascia aperto; da decidere se/come applicarlo.
-- [ ] Gestione membri: rimuovere un membro (il fondatore può farlo lato DB — policy già presente — ma manca l'azione in UI), lasciare una camera da membro.
-- [ ] Eliminazione camera da parte del fondatore (non ancora esposta in UI; la policy DB c'è già).
+- [x] Gestione membri (rimuovere un membro, lasciare una camera) ed eliminazione camera da parte del fondatore — vedi "Fatto" sopra (2026-09-07).
 - [ ] Job di pulizia per i file orfani nel bucket `room-photos` oltre i 30 giorni (gap noto: il job `pg_cron` di retention cancella solo le righe di `AAA3_chat_messages`, non i file storage — serve una Edge Function schedulata con service role, vedi commento nella migrazione).
 
 ### Autenticazione

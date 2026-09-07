@@ -1,5 +1,6 @@
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabaseClient'
+import { roomsQueryKey } from './useRooms'
 
 export function roomQueryKey(roomId: string | undefined) {
   return ['room', roomId] as const
@@ -40,5 +41,60 @@ export function useRoomMembers(roomId: string | undefined) {
       return data
     },
     enabled: Boolean(roomId),
+  })
+}
+
+// Il fondatore non può "lasciare" (lascerebbe la camera senza fondatore ma
+// ancora esistente) — per lui l'unica azione è eliminare la camera intera.
+export function useLeaveRoom(roomId: string | undefined, userId: string | undefined) {
+  const queryClient = useQueryClient()
+
+  return useMutation<void, Error, void>({
+    mutationFn: async () => {
+      if (!roomId || !userId) throw new Error('Camera o utente non disponibili.')
+      const { error } = await supabase
+        .from('AAA3_room_members')
+        .delete()
+        .eq('room_id', roomId)
+        .eq('user_id', userId)
+      if (error) throw error
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: roomMembersQueryKey(roomId) })
+      queryClient.invalidateQueries({ queryKey: roomsQueryKey(userId) })
+    },
+  })
+}
+
+export function useRemoveMember(roomId: string | undefined) {
+  const queryClient = useQueryClient()
+
+  return useMutation<void, Error, string>({
+    mutationFn: async (memberUserId: string) => {
+      if (!roomId) throw new Error('Camera non disponibile.')
+      const { error } = await supabase
+        .from('AAA3_room_members')
+        .delete()
+        .eq('room_id', roomId)
+        .eq('user_id', memberUserId)
+      if (error) throw error
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: roomMembersQueryKey(roomId) })
+    },
+  })
+}
+
+export function useDeleteRoom(userId: string | undefined) {
+  const queryClient = useQueryClient()
+
+  return useMutation<void, Error, string>({
+    mutationFn: async (roomId: string) => {
+      const { error } = await supabase.from('AAA3_rooms').delete().eq('id', roomId)
+      if (error) throw error
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: roomsQueryKey(userId) })
+    },
   })
 }
