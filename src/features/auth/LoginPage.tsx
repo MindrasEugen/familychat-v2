@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { supabase } from '../../lib/supabaseClient'
 
-type Mode = 'signin' | 'signup'
+type Mode = 'signin' | 'signup' | 'forgot-password'
 
 export function LoginPage() {
   const [mode, setMode] = useState<Mode>('signin')
@@ -49,6 +49,66 @@ export function LoginPage() {
     setLoading(false)
   }
 
+  async function handleForgotPassword(event: FormEvent) {
+    event.preventDefault()
+    setLoading(true)
+    setErrorMessage(null)
+    setInfoMessage(null)
+
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    })
+    setLoading(false)
+
+    if (error) {
+      setErrorMessage(error.message)
+      return
+    }
+
+    // Messaggio generico a prescindere dal fatto che l'email esista o meno
+    // (non far capire dall'esterno quali indirizzi sono registrati).
+    setInfoMessage("Se l'indirizzo esiste, riceverai un'email con le istruzioni per reimpostare la password.")
+  }
+
+  if (mode === 'forgot-password') {
+    return (
+      <section>
+        <h1>Password dimenticata</h1>
+
+        <form onSubmit={handleForgotPassword}>
+          <label>
+            Email
+            <input
+              type="email"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              required
+              autoComplete="email"
+            />
+          </label>
+
+          {errorMessage && <p role="alert">{errorMessage}</p>}
+          {infoMessage && <p role="status">{infoMessage}</p>}
+
+          <button type="submit" disabled={loading}>
+            Invia link di reset
+          </button>
+        </form>
+
+        <button
+          type="button"
+          onClick={() => {
+            setMode('signin')
+            setErrorMessage(null)
+            setInfoMessage(null)
+          }}
+        >
+          Torna al login
+        </button>
+      </section>
+    )
+  }
+
   return (
     <section>
       <h1>{mode === 'signin' ? 'Accedi' : 'Registrati'}</h1>
@@ -94,6 +154,19 @@ export function LoginPage() {
       >
         {mode === 'signin' ? 'Non hai un account? Registrati' : 'Hai già un account? Accedi'}
       </button>
+
+      {mode === 'signin' && (
+        <button
+          type="button"
+          onClick={() => {
+            setMode('forgot-password')
+            setErrorMessage(null)
+            setInfoMessage(null)
+          }}
+        >
+          Password dimenticata?
+        </button>
+      )}
     </section>
   )
 }

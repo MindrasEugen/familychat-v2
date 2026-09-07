@@ -3,7 +3,8 @@ import { useEffect } from 'react'
 import { Link, Navigate, Route, Routes } from 'react-router-dom'
 import { CompleteProfilePage } from './features/auth/CompleteProfilePage'
 import { LoginPage } from './features/auth/LoginPage'
-import { GuestOnly, RequireAuth, RequireSessionNoProfile } from './features/auth/routeGuards'
+import { ResetPasswordPage } from './features/auth/ResetPasswordPage'
+import { GuestOnly, RequireAuth, RequirePasswordRecovery, RequireSessionNoProfile } from './features/auth/routeGuards'
 import { initSessionListener } from './features/auth/sessionStore'
 import { useAuthStatus } from './features/auth/useAuthStatus'
 import { RoomChatPage } from './features/chat/RoomChatPage'
@@ -43,6 +44,14 @@ function AppLayout() {
             <GuestOnly>
               <LoginPage />
             </GuestOnly>
+          }
+        />
+        <Route
+          path="/reset-password"
+          element={
+            <RequirePasswordRecovery>
+              <ResetPasswordPage />
+            </RequirePasswordRecovery>
           }
         />
         <Route
