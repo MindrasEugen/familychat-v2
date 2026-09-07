@@ -12,6 +12,10 @@ dist
 dist-ssr
 *.local
 
+# Chiavi delle Edge Function (mai committare) — vedi
+# supabase/functions/.env.example per il template
+supabase/functions/.env
+
 # Test artifacts
 .vitest-localstorage.sqlite*
 coverage
