@@ -20,7 +20,6 @@ in `NOTE.md` — consultarlo per il "perché" dietro una scelta già presa.
 
 ### Autenticazione
 - [ ] Più account/camere collegati sullo stesso dispositivo contemporaneamente — richiede istanze client Supabase separate (storageKey distinti) o meccanismo equivalente; da progettare come decisione a sé, non ancora affrontata.
-- [ ] Gestione esplicita dei casi limite di sessione/realtime: telefono in background a lungo, rete che cade e torna, riapertura da notifica push (lezione 2) — verificare/ricreare un canale realtime solo se non è più vivo, non ad ogni evento di foreground (lezione 10, seconda parte).
 - [ ] **Azione richiesta all'utente**: aggiungere `http://localhost:5173/reset-password` (e l'equivalente dominio di produzione, quando esisterà) alle Redirect URLs del progetto Supabase (`qamvkevkddfwyxhbftoy`) da Dashboard → Authentication → URL Configuration — senza questo, il recupero password resta bloccato in pratica anche se il codice è già implementato e verificato (vedi `NOTE.md`, 2026-09-07). Nessuno strumento disponibile da qui può impostarlo al posto dell'utente.
 
 ### Chat

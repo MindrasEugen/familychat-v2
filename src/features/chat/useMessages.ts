@@ -95,42 +95,74 @@ export function useLoadOlderMessages(roomId: string | undefined) {
 }
 
 // Sottoscrizione realtime: aggiorna direttamente la cache per id, non
-// invalida/rifetcha mai la query — un invalidate riavvierebbe il fetch
-// completo e riaprirebbe esattamente la finestra di corsa della lezione 10.
-// Il canale vive per tutta la durata del mount di questo hook (roomId
-// stabile finché si resta sulla stessa camera): niente ricreazione ad
-// ogni evento di focus/rete, la riconnessione del socket è già gestita
-// dal client Supabase.
+// invalida/rifetcha mai la query per un singolo evento — un invalidate per
+// ogni INSERT/DELETE riaprirebbe esattamente la finestra di corsa della
+// lezione 10. Il canale vive per tutta la durata del mount di questo hook
+// (roomId stabile finché si resta sulla stessa camera): niente ricreazione
+// ad ogni evento di focus/rete "di routine", la riconnessione del socket è
+// già gestita dal client Supabase.
+//
+// Eccezione deliberata (lezione 2 + lezione 10 seconda parte): un tab in
+// background a lungo, o una rete che cade e torna, può lasciare il socket
+// realtime "zombie" — ancora segnato come vivo lato client ma non più
+// raggiunto dal server, perché i timer di heartbeat/riconnessione di
+// supabase-js vengono congelati insieme al resto della tab, non solo il
+// socket. Al ritorno in foreground o in rete verifichiamo lo STATO reale
+// del canale e lo ricreiamo solo se non è più "joined" (mai ad ogni evento,
+// altrimenti un canale sano verrebbe ricreato inutilmente). Una volta
+// ricreato, un unico invalidate (non per-evento, quindi non in contrasto
+// con la nota sopra) recupera i messaggi arrivati durante la finestra morta,
+// che una sottoscrizione realtime non può riconsegnare retroattivamente.
 export function useRoomMessagesRealtime(roomId: string | undefined) {
   const queryClient = useQueryClient()
 
   useEffect(() => {
     if (!roomId) return
 
-    const channel = supabase
-      .channel(`room-messages-${roomId}`)
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'AAA3_chat_messages', filter: `room_id=eq.${roomId}` },
-        (payload) => {
-          queryClient.setQueryData<Message[]>(messagesQueryKey(roomId), (old) =>
-            mergeMessages(old ?? [], [payload.new as Message]),
-          )
-        },
-      )
-      .on(
-        'postgres_changes',
-        { event: 'DELETE', schema: 'public', table: 'AAA3_chat_messages', filter: `room_id=eq.${roomId}` },
-        (payload) => {
-          const deletedId = (payload.old as Message).id
-          queryClient.setQueryData<Message[]>(messagesQueryKey(roomId), (old) =>
-            (old ?? []).filter((message) => message.id !== deletedId),
-          )
-        },
-      )
-      .subscribe()
+    function createChannel() {
+      return supabase
+        .channel(`room-messages-${roomId}`)
+        .on(
+          'postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'AAA3_chat_messages', filter: `room_id=eq.${roomId}` },
+          (payload) => {
+            queryClient.setQueryData<Message[]>(messagesQueryKey(roomId), (old) =>
+              mergeMessages(old ?? [], [payload.new as Message]),
+            )
+          },
+        )
+        .on(
+          'postgres_changes',
+          { event: 'DELETE', schema: 'public', table: 'AAA3_chat_messages', filter: `room_id=eq.${roomId}` },
+          (payload) => {
+            const deletedId = (payload.old as Message).id
+            queryClient.setQueryData<Message[]>(messagesQueryKey(roomId), (old) =>
+              (old ?? []).filter((message) => message.id !== deletedId),
+            )
+          },
+        )
+        .subscribe()
+    }
+
+    let channel = createChannel()
+
+    function recoverIfDead() {
+      if (channel.state === 'joined' || channel.state === 'joining') return
+      supabase.removeChannel(channel)
+      channel = createChannel()
+      queryClient.invalidateQueries({ queryKey: messagesQueryKey(roomId) })
+    }
+
+    function onVisibilityChange() {
+      if (document.visibilityState === 'visible') recoverIfDead()
+    }
+
+    document.addEventListener('visibilitychange', onVisibilityChange)
+    window.addEventListener('online', recoverIfDead)
 
     return () => {
+      document.removeEventListener('visibilitychange', onVisibilityChange)
+      window.removeEventListener('online', recoverIfDead)
       supabase.removeChannel(channel)
     }
   }, [roomId, queryClient])
