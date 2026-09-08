@@ -7,6 +7,10 @@ import { compressImage } from '../../lib/imageCompression'
 
 const PHOTO_BUCKET = 'room-photos'
 export const MESSAGES_PAGE_SIZE = 100
+// Tetto lato client (oltre al vincolo DB "AAA3_chat_messages_image_paths_max_10"),
+// scelto esplicitamente dall'utente — evita di far partire fino a 10 upload
+// per poi scoprire il rifiuto solo all'insert finale.
+export const MAX_PHOTOS_PER_MESSAGE = 10
 
 function fileExtension(file: File): string {
   const match = /\.([a-zA-Z0-9]+)$/.exec(file.name)
@@ -168,34 +172,38 @@ export function useRoomMessagesRealtime(roomId: string | undefined) {
   }, [roomId, queryClient])
 }
 
+async function uploadMessagePhoto(roomId: string, file: File): Promise<string> {
+  // Se la compressione fallisce su tutte le strategie, carichiamo il file
+  // originale così com'è invece di bloccare l'invio (lezione 5): il
+  // messaggio deve arrivare comunque.
+  const compressed = await compressImage(file)
+  const toUpload = compressed ?? file
+  const ext = compressed ? 'jpg' : fileExtension(file)
+  const contentType = compressed ? 'image/jpeg' : file.type || 'application/octet-stream'
+  // Path "<room_id>/<file>": le policy RLS sul bucket leggono il primo
+  // segmento come room_id per verificare l'appartenenza alla camera.
+  const path = `${roomId}/${crypto.randomUUID()}.${ext}`
+  const { error: uploadError } = await supabase.storage.from(PHOTO_BUCKET).upload(path, toUpload, { contentType })
+  if (uploadError) throw uploadError
+  return path
+}
+
 export function useSendMessage(roomId: string | undefined, userId: string | undefined) {
   const queryClient = useQueryClient()
 
-  return useMutation<Message, PostgrestError | Error, { body: string; imageFile: File | null }>({
-    mutationFn: async ({ body, imageFile }) => {
+  return useMutation<Message, PostgrestError | Error, { body: string; imageFiles: File[] }>({
+    mutationFn: async ({ body, imageFiles }) => {
       if (!roomId || !userId) throw new Error('Camera o utente non disponibili.')
 
-      let imagePath: string | null = null
-      if (imageFile) {
-        // Se la compressione fallisce su tutte le strategie, carichiamo il
-        // file originale così com'è invece di bloccare l'invio (lezione 5):
-        // il messaggio deve arrivare comunque.
-        const compressed = await compressImage(imageFile)
-        const toUpload = compressed ?? imageFile
-        const ext = compressed ? 'jpg' : fileExtension(imageFile)
-        const contentType = compressed ? 'image/jpeg' : imageFile.type || 'application/octet-stream'
-        // Path "<room_id>/<file>": le policy RLS sul bucket leggono il primo
-        // segmento come room_id per verificare l'appartenenza alla camera.
-        imagePath = `${roomId}/${crypto.randomUUID()}.${ext}`
-        const { error: uploadError } = await supabase.storage
-          .from(PHOTO_BUCKET)
-          .upload(imagePath, toUpload, { contentType })
-        if (uploadError) throw uploadError
-      }
+      // Compressione + upload in parallelo, non in sequenza: con fino a 10
+      // foto (alcune potenzialmente HEIC, cascata di compressione più lenta)
+      // un upload sequenziale sarebbe percepibilmente lento senza motivo,
+      // ogni file è indipendente dagli altri.
+      const imagePaths = await Promise.all(imageFiles.map((file) => uploadMessagePhoto(roomId, file)))
 
       const { data, error } = await supabase
         .from('AAA3_chat_messages')
-        .insert({ room_id: roomId, sender_id: userId, body: body.trim() || null, image_path: imagePath })
+        .insert({ room_id: roomId, sender_id: userId, body: body.trim() || null, image_paths: imagePaths })
         .select()
         .single()
 
@@ -215,18 +223,19 @@ export function useSendMessage(roomId: string | undefined, userId: string | unde
 export function useDeleteMessage(roomId: string | undefined) {
   const queryClient = useQueryClient()
 
-  return useMutation<void, PostgrestError | Error, { id: string; imagePath: string | null }>({
-    mutationFn: async ({ id, imagePath }) => {
+  return useMutation<void, PostgrestError | Error, { id: string; imagePaths: string[] }>({
+    mutationFn: async ({ id, imagePaths }) => {
       if (!roomId) throw new Error('Camera non disponibile.')
 
       const { error } = await supabase.from('AAA3_chat_messages').delete().eq('id', id)
 
       if (error) throw error
 
-      // Best-effort: prova a rimuovere il file associato, ma non bloccare se
-      // fallisce — la riga in DB è comunque cancellata correttamente.
-      if (imagePath) {
-        await supabase.storage.from(PHOTO_BUCKET).remove([imagePath]).catch(() => {})
+      // Best-effort: prova a rimuovere i file associati (uno o più), ma non
+      // bloccare se fallisce — la riga in DB è comunque cancellata
+      // correttamente. remove() accetta già un array, una sola chiamata.
+      if (imagePaths.length > 0) {
+        await supabase.storage.from(PHOTO_BUCKET).remove(imagePaths).catch(() => {})
       }
     },
     onSuccess: (_, { id }) => {

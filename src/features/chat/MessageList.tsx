@@ -132,14 +132,16 @@ export function MessageList({
               : (usernamesById.get(message.sender_id) ?? '(sconosciuto)')}
           </strong>
           {message.body && <MessageBody body={message.body} currentUserId={currentUserId} />}
-          {message.image_path && <MessageImage imagePath={message.image_path} />}
+          {message.image_paths.map((imagePath) => (
+            <MessageImage key={imagePath} imagePath={imagePath} />
+          ))}
           {(message.sender_id === currentUserId || isFounder) && (
             <button
               type="button"
               onClick={() =>
                 deleteMessage.mutate({
                   id: message.id,
-                  imagePath: message.image_path,
+                  imagePaths: message.image_paths,
                 })
               }
               disabled={deleteMessage.isPending}

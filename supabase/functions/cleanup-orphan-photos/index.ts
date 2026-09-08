@@ -87,10 +87,13 @@ Deno.serve(async (req: Request) => {
 
   const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 
+  // Un messaggio può referenziare più foto (fino a 10, vedi migrazione
+  // 20260908123934_chat_messages_multi_photo.sql) — image_paths è un array,
+  // niente filtro "is not null" (un array vuoto è comunque non-null e
+  // contribuisce zero path al set qui sotto).
   const { data: referenced, error: referencedError } = await supabase
     .from("AAA3_chat_messages")
-    .select("image_path")
-    .not("image_path", "is", null);
+    .select("image_paths");
 
   if (referencedError) {
     return new Response(JSON.stringify({ error: "Failed to load referenced paths" }), {
@@ -99,7 +102,9 @@ Deno.serve(async (req: Request) => {
     });
   }
 
-  const referencedPaths = new Set((referenced ?? []).map((row) => row.image_path as string));
+  const referencedPaths = new Set(
+    (referenced ?? []).flatMap((row) => (row.image_paths as string[] | null) ?? []),
+  );
 
   let allFiles: { path: string; createdAt: string | null }[];
   try {

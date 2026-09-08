@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent } from 'react'
-import { useSendMessage } from './useMessages'
+import { MAX_PHOTOS_PER_MESSAGE, useSendMessage } from './useMessages'
 
 export function MessageComposer({
   roomId,
@@ -10,34 +10,45 @@ export function MessageComposer({
 }) {
   const sendMessage = useSendMessage(roomId, userId)
   const [body, setBody] = useState('')
-  const [imageFile, setImageFile] = useState<File | null>(null)
+  const [imageFiles, setImageFiles] = useState<File[]>([])
+  const [tooManyMessage, setTooManyMessage] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const previewUrl = useMemo(() => (imageFile ? URL.createObjectURL(imageFile) : null), [imageFile])
+  const previewUrls = useMemo(() => imageFiles.map((file) => URL.createObjectURL(file)), [imageFiles])
 
-  // L'object URL dell'anteprima va revocato quando cambia/si svuota la
-  // selezione o quando il componente si smonta, altrimenti resta in memoria.
+  // Gli object URL delle anteprime vanno revocati quando la selezione
+  // cambia/si svuota o quando il componente si smonta, altrimenti restano
+  // in memoria.
   useEffect(() => {
     return () => {
-      if (previewUrl) URL.revokeObjectURL(previewUrl)
+      for (const url of previewUrls) URL.revokeObjectURL(url)
     }
-  }, [previewUrl])
+  }, [previewUrls])
 
   function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
-    setImageFile(event.target.files?.[0] ?? null)
+    const selected = Array.from(event.target.files ?? [])
+    if (selected.length > MAX_PHOTOS_PER_MESSAGE) {
+      setTooManyMessage(
+        `Puoi allegare al massimo ${MAX_PHOTOS_PER_MESSAGE} foto per messaggio — le altre sono state ignorate.`,
+      )
+    } else {
+      setTooManyMessage(null)
+    }
+    setImageFiles(selected.slice(0, MAX_PHOTOS_PER_MESSAGE))
   }
 
   function clearPhotoSelection() {
-    setImageFile(null)
+    setImageFiles([])
+    setTooManyMessage(null)
     if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
   function handleSubmit(event: FormEvent) {
     event.preventDefault()
     const trimmed = body.trim()
-    if (!trimmed && !imageFile) return
+    if (!trimmed && imageFiles.length === 0) return
     sendMessage.mutate(
-      { body: trimmed, imageFile },
+      { body: trimmed, imageFiles },
       {
         onSuccess: () => {
           setBody('')
@@ -60,18 +71,22 @@ export function MessageComposer({
         />
       </label>
       <label>
-        Foto
+        Foto (fino a {MAX_PHOTOS_PER_MESSAGE})
         <input
           ref={fileInputRef}
           type="file"
           accept="image/*"
+          multiple
           onChange={handleFileChange}
           disabled={sendMessage.isPending}
         />
       </label>
-      {previewUrl && (
+      {tooManyMessage && <p role="alert">{tooManyMessage}</p>}
+      {previewUrls.length > 0 && (
         <p>
-          <img src={previewUrl} alt="Anteprima foto selezionata" style={{ maxWidth: 200 }} />
+          {previewUrls.map((url) => (
+            <img key={url} src={url} alt="Anteprima foto selezionata" style={{ maxWidth: 120, marginRight: 4 }} />
+          ))}
           <button type="button" onClick={clearPhotoSelection} disabled={sendMessage.isPending}>
             Rimuovi foto
           </button>

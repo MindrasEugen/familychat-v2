@@ -27,7 +27,7 @@ interface ChatMessageRecord {
   room_id: string;
   sender_id: string;
   body: string | null;
-  image_path: string | null;
+  image_paths: string[] | null;
 }
 
 Deno.serve(async (req: Request) => {

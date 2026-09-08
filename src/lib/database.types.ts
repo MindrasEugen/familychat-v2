@@ -71,7 +71,7 @@ export type Database = {
           body: string | null
           created_at: string
           id: string
-          image_path: string | null
+          image_paths: string[]
           room_id: string
           sender_id: string
         }
@@ -79,7 +79,7 @@ export type Database = {
           body?: string | null
           created_at?: string
           id?: string
-          image_path?: string | null
+          image_paths?: string[]
           room_id: string
           sender_id: string
         }
@@ -87,7 +87,7 @@ export type Database = {
           body?: string | null
           created_at?: string
           id?: string
-          image_path?: string | null
+          image_paths?: string[]
           room_id?: string
           sender_id?: string
         }
