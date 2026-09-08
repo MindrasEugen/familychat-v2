@@ -14,9 +14,6 @@ in `NOTE.md` — consultarlo per il "perché" dietro una scelta già presa.
 ### Setup/manuale
 - [ ] Decidere se serve ancora la PWA (service worker, manifest, `vite-plugin-pwa`) con l'architettura nuova — non dare per scontato solo perché la v1 la aveva.
 
-### Modello dati Supabase — rifinitura
-- [ ] Non ancora imposto un limite al numero di inviti che un membro può creare (`AAA3_room_invites`) — il documento lo lascia aperto; da decidere se/come applicarlo.
-
 ### Autenticazione
 - [ ] Più account/camere collegati sullo stesso dispositivo contemporaneamente — richiede istanze client Supabase separate (storageKey distinti) o meccanismo equivalente; da progettare come decisione a sé, non ancora affrontata.
 - [ ] **Azione richiesta all'utente**: aggiungere `http://localhost:5173/reset-password` (e l'equivalente dominio di produzione, quando esisterà) alle Redirect URLs del progetto Supabase (`qamvkevkddfwyxhbftoy`) da Dashboard → Authentication → URL Configuration — senza questo, il recupero password resta bloccato in pratica anche se il codice è già implementato e verificato (vedi `NOTE.md`, 2026-09-07). Nessuno strumento disponibile da qui può impostarlo al posto dell'utente.

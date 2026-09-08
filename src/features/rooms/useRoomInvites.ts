@@ -43,7 +43,23 @@ export function useCreateRoomInvite(roomId: string | undefined, userId: string |
         .select()
         .single()
 
-      if (error) throw error
+      if (error) {
+        // La policy RLS blocca l'insert anche quando un MEMBRO (non il
+        // fondatore, che non ha limite) supera il limite di 5 inviti attivi
+        // per camera (vedi migrazione
+        // 20260908114715_room_invites_active_limit.sql), non solo quando non
+        // si è membri — a questo punto della UI la seconda causa è già
+        // esclusa (solo un membro vede questo pulsante), quindi un 42501 qui
+        // significa quasi certamente il limite. Messaggio dedicato invece
+        // del testo grezzo di Postgres ("new row violates row-level security
+        // policy...").
+        if (error.code === '42501') {
+          throw new Error(
+            'Hai raggiunto il limite di 5 inviti attivi per questa camera. Revoca un invito non ancora usato per crearne uno nuovo.',
+          )
+        }
+        throw error
+      }
       return data
     },
     onSuccess: () => {
