@@ -1,9 +1,25 @@
 import { useState, type FormEvent } from 'react'
+import type { Session, SupabaseClient } from '@supabase/supabase-js'
 import { supabase } from '../../lib/supabaseClient'
+import type { Database } from '../../lib/database.types'
 
 type Mode = 'signin' | 'signup' | 'forgot-password'
 
-export function LoginPage() {
+interface LoginPageProps {
+  // Di default il client "attivo" condiviso (login/registrazione normali).
+  // AddAccountPage passa esplicitamente il client di uno slot libero, così
+  // il login di un secondo account non tocca la sessione già attiva
+  // dell'account corrente finché non ha successo (vedi AddAccountPage.tsx).
+  client?: SupabaseClient<Database>
+  // Chiamato solo dopo un vero login/registrazione con sessione immediata
+  // (mai dopo un signUp che richiede conferma email, lì non esiste ancora
+  // nessuna sessione da registrare). Il chiamante decide cosa "registrare"
+  // questo login come (slot attivo per /login, un nuovo slot per
+  // /add-account) — LoginPage non ha e non deve avere quel contesto.
+  onSignedIn?: (session: Session) => void
+}
+
+export function LoginPage({ client = supabase, onSignedIn }: LoginPageProps) {
   const [mode, setMode] = useState<Mode>('signin')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -17,9 +33,14 @@ export function LoginPage() {
     setErrorMessage(null)
     setInfoMessage(null)
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
-    if (error) setErrorMessage(error.message)
+    const { data, error } = await client.auth.signInWithPassword({ email, password })
+    if (error) {
+      setErrorMessage(error.message)
+      setLoading(false)
+      return
+    }
     setLoading(false)
+    if (data.session) onSignedIn?.(data.session)
   }
 
   async function handleSignUp(event: FormEvent) {
@@ -28,7 +49,7 @@ export function LoginPage() {
     setErrorMessage(null)
     setInfoMessage(null)
 
-    const { data, error } = await supabase.auth.signUp({ email, password })
+    const { data, error } = await client.auth.signUp({ email, password })
     if (error) {
       setErrorMessage(error.message)
       setLoading(false)
@@ -45,6 +66,10 @@ export function LoginPage() {
         'Registrazione avviata: controlla la tua email per confermare l\'account, poi accedi.',
       )
       setMode('signin')
+    } else {
+      // Progetto con autoconferma email attiva: sessione già disponibile
+      // subito, nessun secondo passaggio di login necessario.
+      onSignedIn?.(data.session)
     }
     setLoading(false)
   }
@@ -55,7 +80,7 @@ export function LoginPage() {
     setErrorMessage(null)
     setInfoMessage(null)
 
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    const { error } = await client.auth.resetPasswordForEmail(email, {
       redirectTo: `${window.location.origin}/reset-password`,
     })
     setLoading(false)
