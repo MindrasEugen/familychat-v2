@@ -12,7 +12,6 @@ in `NOTE.md` — consultarlo per il "perché" dietro una scelta già presa.
 ## Da fare
 
 ### Setup/manuale
-- [ ] `pnpm exec playwright install` (non eseguito nello scaffold per evitare un download pesante non richiesto) prima di poter lanciare `pnpm test:e2e`.
 - [ ] Decidere se serve ancora la PWA (service worker, manifest, `vite-plugin-pwa`) con l'architettura nuova — non dare per scontato solo perché la v1 la aveva.
 
 ### Modello dati Supabase — rifinitura
