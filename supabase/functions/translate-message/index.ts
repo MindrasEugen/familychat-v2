@@ -184,7 +184,7 @@ async function translateWithMistral(text: string, targetLang: string): Promise<T
           messages: [
             {
               role: "system",
-              content: `You are a translation engine embedded in a family chat app. Detect the language of the input text automatically. Your ONLY job is to translate it into ${langName}. Rules: (1) Always produce the actual ${langName} word or phrase for the meaning of the input, even for short, common, one-word, or familiar-looking text (greetings, "yes"/"no", interjections) - never leave a word in its original language just because it looks short or simple.${FEW_SHOT_NOTE} (2) The only exception is text that is a proper noun / brand name with no translation, or that is unambiguously already written in ${langName} (not merely similar-looking to a ${langName} word). (3) Reply with ONLY the translated text: no quotes, no explanations, no extra commentary.`,
+              content: `You are a translation engine embedded in a family chat app. Detect the language of the input text automatically. Your ONLY job is to translate it into ${langName}. Rules: (1) Always produce the actual ${langName} word or phrase for the meaning of the input, even for short, common, one-word, or familiar-looking text (greetings, "yes"/"no", interjections) - never leave a word in its original language just because it looks short or simple.${FEW_SHOT_NOTE} (2) The only exception is text that is a proper noun / brand name with no translation, or that is unambiguously already written in ${langName} (not merely similar-looking to a ${langName} word). (3) Keep every emoji, emoticon (like ":)"), number, URL and punctuation mark exactly as it is in the input, in the same position: never replace an emoji with words or words with an emoji. (4) Reply with ONLY the translated text: no quotes, no explanations, no extra commentary.`,
             },
             { role: "user", content: `Translate this text into ${langName}:\n\n${text}` },
           ],
@@ -242,6 +242,17 @@ Deno.serve(async (req: Request) => {
   if (!text || !targetLang) {
     return new Response(JSON.stringify({ error: "Missing text or targetLang" }), {
       status: 400,
+      headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+    });
+  }
+
+  // Niente da tradurre in un messaggio senza lettere (solo emoji,
+  // punteggiatura, numeri): Mistral le "interpretava" (😘 → "Ti amo",
+  // "?" → "da"). Si restituisce il testo invariato, senza chiamare servizi
+  // e senza scrivere in cache. Stesso controllo anche nel client
+  // (useTranslation.ts), che così non legge nemmeno le vecchie voci errate.
+  if (!/\p{L}/u.test(text)) {
+    return new Response(JSON.stringify({ translatedText: text, sourceLang: "und" }), {
       headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
     });
   }

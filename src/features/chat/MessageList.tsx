@@ -89,7 +89,8 @@ function MessageBody({ body, currentUserId }: { body: string; currentUserId: str
   return (
     <>
       <p>{isTranslated ? translated : body}</p>
-      {translationQuery.data && !isCorrecting && (
+      {/* sourceLang "und": solo emoji/punteggiatura, niente da correggere. */}
+      {translationQuery.data && translationQuery.data.sourceLang !== 'und' && !isCorrecting && (
         // Pillola verde solo se il testo è davvero tradotto; altrimenti
         // (stessa lingua, o eco) resta solo il link discreto per correggere.
         <span className={isTranslated ? 'translated' : 'translated plain'}>

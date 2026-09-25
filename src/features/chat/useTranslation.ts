@@ -1,6 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabaseClient'
 
+function hasLetters(text: string) {
+  return /\p{L}/u.test(text)
+}
+
 function normalize(text: string) {
   return text.trim().toLowerCase()
 }
@@ -28,6 +32,11 @@ export function useMessageTranslation(text: string | null, targetLang: string) {
   return useQuery({
     queryKey: translationQueryKey(trimmed, targetLang),
     queryFn: async (): Promise<TranslationResult> => {
+      // Solo emoji/punteggiatura/numeri: niente da tradurre, e niente
+      // lettura della cache (contiene ancora vecchie voci di Mistral come
+      // 😘 → "Ti amo"). Il testo identico non viene mostrato come tradotto.
+      if (!hasLetters(trimmed)) return { translatedText: trimmed, sourceLang: 'und' }
+
       const { data: cached, error: cacheError } = await supabase
         .from('AAA3_translation_memory')
         .select('translated_text, source_lang')
