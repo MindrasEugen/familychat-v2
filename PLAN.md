@@ -24,8 +24,15 @@ in `NOTE.md` — consultarlo per il "perché" dietro una scelta già presa.
 - [ ] Idea in attesa, non richiesta: passare la lingua di partenza invece dell'auto-rilevamento (messaggi corti rilevati male: `la`, `de`, `it` su testi probabilmente rumeni). L'utente preferisce osservare prima.
 
 ### Grafica
-- [ ] **Verificare in browser** le schermate dopo l'accesso (lista camere, chat, Info camera, traduttore, Account) in formato telefono e desktop, in entrambi i temi — il 2026-09-25 è stata vista solo la pagina di accesso (l'accesso con password va fatto dall'utente).
+- [ ] **Verificare in browser** le schermate dopo l'accesso (lista camere, chat, Info camera, traduttore, Account, vista foto a schermo intero, tutorial via "Rivedi la guida") in formato telefono e desktop, in entrambi i temi — il 2026-09-25 è stata vista solo la pagina di accesso (l'accesso con password va fatto dall'utente).
 - [ ] Provare su un telefono vero: barra in basso e barra di scrittura con le safe area (notch/gesture bar), app installata (PWA) con il colore di sistema del tema.
+
+### Foto in chat
+- [ ] Su telefono vero: pulsante fotocamera (soprattutto **Brave su Android**, il caso che lo ha motivato) e "Scarica" dalla vista a schermo intero, anche nell'app installata (PWA) e su iPhone.
+
+### Tutorial di benvenuto
+- [ ] Far rileggere i testi in rumeno e francese a chi parla la lingua (`src/features/tutorial/tutorialTexts.ts`) — scritti da Claude, non ancora rivisti da un madrelingua.
+- [ ] Verificare il primo avvio reale con un profilo appena creato: il tutorial compare una volta, "Salta"/"Inizia"/Esc lo segnano come visto (`tutorial_seen_at` valorizzato) e non ricompare dopo un reload.
 
 ### Notifiche push
 - [ ] **Verifica con un vero permesso di notifica** (browser non automatizzato): ricezione reale di una push, soppressione quando la camera è già aperta, comportamento del click sulla notifica.
