@@ -23,6 +23,8 @@
   --sage-bg: rgba(156, 194, 165, 0.14);
   --danger: #f08c7e;
   --shadow: 0 18px 40px rgba(0, 0, 0, 0.45);
+  --overlay: rgba(12, 9, 8, 0.94);
+  --overlay-ink: #f4ebe5;
 }
 
 :root[data-theme='light'] {
@@ -43,6 +45,8 @@
   --sage-bg: rgba(77, 125, 90, 0.12);
   --danger: #b8473a;
   --shadow: 0 18px 40px rgba(90, 55, 35, 0.14);
+  --overlay: rgba(28, 20, 16, 0.92);
+  --overlay-ink: #f4ebe5;
 }
 
 :root {
@@ -819,4 +823,83 @@ input:-webkit-autofill:focus {
   -webkit-box-shadow: 0 0 0 100px var(--surface) inset;
   -webkit-text-fill-color: var(--text);
   caret-color: var(--text);
+}
+
+/* ---------- Foto: miniature cliccabili e vista a schermo intero ---------- */
+
+.photo-thumb {
+  display: block;
+  padding: 0;
+  border-radius: 12px;
+  overflow: hidden;
+  background: transparent;
+  cursor: zoom-in;
+}
+.photo-viewer {
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  border: 0;
+  padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px)
+    env(safe-area-inset-left, 0px);
+  background: var(--overlay);
+  color: var(--overlay-ink);
+  flex-direction: column;
+}
+.photo-viewer[open] {
+  display: flex;
+}
+.photo-viewer::backdrop {
+  background: var(--overlay);
+}
+.viewer-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+}
+.viewer-count {
+  flex: 1;
+  text-align: center;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.viewer-alert {
+  text-align: center;
+  padding: 0 16px 8px;
+}
+.viewer-stage {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 16px 24px;
+}
+.viewer-image {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  border-radius: 8px;
+}
+.viewer-status {
+  color: var(--overlay-ink);
+  opacity: 0.8;
+}
+.viewer-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 44px;
+  height: 44px;
+}
+.viewer-nav.prev {
+  left: 12px;
+}
+.viewer-nav.next {
+  right: 12px;
 }

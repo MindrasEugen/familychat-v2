@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent } from 'react'
-import { PhotoIcon, SendIcon } from '../../components/icons'
+import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from 'react'
+import { CameraIcon, PhotoIcon, SendIcon } from '../../components/icons'
 import { MAX_PHOTOS_PER_MESSAGE, useSendMessage } from './useMessages'
 
 export function MessageComposer({
@@ -13,7 +13,6 @@ export function MessageComposer({
   const [body, setBody] = useState('')
   const [imageFiles, setImageFiles] = useState<File[]>([])
   const [tooManyMessage, setTooManyMessage] = useState<string | null>(null)
-  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const previewUrls = useMemo(() => imageFiles.map((file) => URL.createObjectURL(file)), [imageFiles])
 
@@ -26,22 +25,37 @@ export function MessageComposer({
     }
   }, [previewUrls])
 
-  function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
-    const selected = Array.from(event.target.files ?? [])
-    if (selected.length > MAX_PHOTOS_PER_MESSAGE) {
+  // Galleria e fotocamera si sommano (es. due scatti + tre foto dalla
+  // galleria), sempre entro il tetto per messaggio: le eccedenti si scartano
+  // subito, prima di qualunque upload.
+  function addPhotos(added: File[]) {
+    const combined = [...imageFiles, ...added]
+    if (combined.length > MAX_PHOTOS_PER_MESSAGE) {
       setTooManyMessage(
         `Puoi allegare al massimo ${MAX_PHOTOS_PER_MESSAGE} foto per messaggio — le altre sono state ignorate.`,
       )
     } else {
       setTooManyMessage(null)
     }
-    setImageFiles(selected.slice(0, MAX_PHOTOS_PER_MESSAGE))
+    setImageFiles(combined.slice(0, MAX_PHOTOS_PER_MESSAGE))
+  }
+
+  function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
+    addPhotos(Array.from(event.target.files ?? []))
+    event.target.value = '' // permette di riscegliere gli stessi file dopo "Rimuovi foto"
+  }
+
+  // Fotocamera: una foto per scatto; si possono scattare più foto di fila
+  // prima di inviare.
+  function handleCameraChange(event: ChangeEvent<HTMLInputElement>) {
+    const shot = event.target.files?.[0]
+    event.target.value = ''
+    if (shot) addPhotos([shot])
   }
 
   function clearPhotoSelection() {
     setImageFiles([])
     setTooManyMessage(null)
-    if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
   function handleSubmit(event: FormEvent) {
@@ -79,17 +93,31 @@ export function MessageComposer({
         </div>
       )}
       <div className="composer-row">
-        {/* Il vero input file è nascosto: il click sull'icona lo apre (è
-            dentro la label), e resta raggiungibile da tastiera. */}
-        <label className="icon-btn photo-picker" title={`Allega foto (fino a ${MAX_PHOTOS_PER_MESSAGE})`}>
+        {/* I veri input file sono nascosti: il click sull'icona li apre (sono
+            dentro la label), e restano raggiungibili da tastiera. Due input
+            separati come in v1: con `multiple` molti browser Android (Brave
+            sempre) aprono solo la galleria, senza fotocamera. `capture` la
+            apre direttamente; da PC si comporta come una scelta file. */}
+        <label className="icon-btn photo-picker" title="Scatta una foto">
+          <CameraIcon />
+          <input
+            type="file"
+            accept="image/*"
+            capture="environment"
+            className="visually-hidden"
+            aria-label="Scatta una foto"
+            onChange={handleCameraChange}
+            disabled={sendMessage.isPending}
+          />
+        </label>
+        <label className="icon-btn photo-picker" title={`Allega foto dalla galleria (fino a ${MAX_PHOTOS_PER_MESSAGE})`}>
           <PhotoIcon />
           <input
-            ref={fileInputRef}
             type="file"
             accept="image/*"
             multiple
             className="visually-hidden"
-            aria-label={`Allega foto (fino a ${MAX_PHOTOS_PER_MESSAGE})`}
+            aria-label={`Allega foto dalla galleria (fino a ${MAX_PHOTOS_PER_MESSAGE})`}
             onChange={handleFileChange}
             disabled={sendMessage.isPending}
           />

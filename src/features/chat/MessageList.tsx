@@ -1,9 +1,9 @@
-import { useQuery } from '@tanstack/react-query'
 import { useState, type FormEvent } from 'react'
 import { Avatar } from '../../components/Avatar'
 import { getDeviceLang } from '../../lib/deviceLang'
-import { supabase } from '../../lib/supabaseClient'
 import type { Database } from '../../lib/database.types'
+import { PhotoViewer } from './PhotoViewer'
+import { usePhotoUrl } from './photoUrls'
 import { useDeleteMessage } from './useMessages'
 import { useCorrectTranslation, useMessageTranslation } from './useTranslation'
 
@@ -14,30 +14,38 @@ export interface MemberInfo {
   avatarUrl: string | null
 }
 
-const SIGNED_URL_TTL_SECONDS = 3600
-
-// Bucket "room-photos" privato: niente getPublicUrl, serve un signed URL per
-// ogni foto. Isolato in un sotto-componente così un fallimento su una singola
+// Isolata in un sotto-componente così un fallimento su una singola
 // immagine (URL scaduto, rete) non rompe il resto della lista dei messaggi.
-function MessageImage({ imagePath }: { imagePath: string }) {
-  const signedUrlQuery = useQuery({
-    queryKey: ['message-photo-signed-url', imagePath],
-    queryFn: async () => {
-      const { data, error } = await supabase.storage
-        .from('room-photos')
-        .createSignedUrl(imagePath, SIGNED_URL_TTL_SECONDS)
-      if (error) throw error
-      return data.signedUrl
-    },
-    staleTime: (SIGNED_URL_TTL_SECONDS / 2) * 1000,
-  })
+function MessageImage({ imagePath, onOpen }: { imagePath: string; onOpen: () => void }) {
+  const urlQuery = usePhotoUrl(imagePath)
 
-  if (signedUrlQuery.isPending) return <div className="photo-placeholder">Caricamento foto…</div>
-  if (signedUrlQuery.isError || !signedUrlQuery.data) {
+  if (urlQuery.isPending) return <div className="photo-placeholder">Caricamento foto…</div>
+  if (urlQuery.isError || !urlQuery.data) {
     return <div className="photo-placeholder">Foto non disponibile.</div>
   }
 
-  return <img src={signedUrlQuery.data} alt="Foto in chat" />
+  return (
+    <button type="button" className="photo-thumb" aria-label="Apri foto" onClick={onOpen}>
+      <img src={urlQuery.data} alt="Foto in chat" />
+    </button>
+  )
+}
+
+function MessagePhotos({ imagePaths }: { imagePaths: string[] }) {
+  const [openIndex, setOpenIndex] = useState<number | null>(null)
+
+  return (
+    <>
+      <div className={imagePaths.length === 1 ? 'bubble-photos single' : 'bubble-photos'}>
+        {imagePaths.map((imagePath, index) => (
+          <MessageImage key={imagePath} imagePath={imagePath} onOpen={() => setOpenIndex(index)} />
+        ))}
+      </div>
+      {openIndex !== null && (
+        <PhotoViewer imagePaths={imagePaths} startIndex={openIndex} onClose={() => setOpenIndex(null)} />
+      )}
+    </>
+  )
 }
 
 // Traduzione automatica nella lingua del dispositivo di chi legge (stessa
@@ -149,13 +157,7 @@ export function MessageList({
             {!isMine && <Avatar url={sender?.avatarUrl} name={sender?.username} size="sm" />}
             <div className="bubble">
               {!isMine && <span className="who">{senderName}</span>}
-              {message.image_paths.length > 0 && (
-                <div className={message.image_paths.length === 1 ? 'bubble-photos single' : 'bubble-photos'}>
-                  {message.image_paths.map((imagePath) => (
-                    <MessageImage key={imagePath} imagePath={imagePath} />
-                  ))}
-                </div>
-              )}
+              {message.image_paths.length > 0 && <MessagePhotos imagePaths={message.image_paths} />}
               {message.body && <MessageBody body={message.body} currentUserId={currentUserId} />}
               <div className="bubble-foot">
                 {(isMine || isFounder) && (
