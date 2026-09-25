@@ -35,9 +35,8 @@ in `NOTE.md` — consultarlo per il "perché" dietro una scelta già presa.
 - [ ] Verificare il primo avvio reale con un profilo appena creato: il tutorial compare una volta, "Salta"/"Inizia"/Esc lo segnano come visto (`tutorial_seen_at` valorizzato) e non ricompare dopo un reload.
 
 ### Notifiche push
-- [ ] Provare con due persone (o due telefoni): notifica ricevuta con l'app chiusa o su un'altra camera; nessuna notifica con "Notifiche di questa camera" spento; due account sullo stesso telefono nella stessa camera → una sola notifica.
+- [ ] Ricezione reale confermata dall'utente il 2026-09-25 (vedi `NOTE.md`). Restano da provare: nessuna notifica con "Notifiche di questa camera" spento; due account sullo stesso telefono nella stessa camera → una sola notifica; soppressione quando la camera è già aperta; comportamento del click sulla notifica.
 - [ ] Controllare l'avviso a tempo (8 s) e i testi specifici su iPhone non installato, permesso bloccato e Brave.
-- [ ] **Verifica con un vero permesso di notifica** (browser non automatizzato): ricezione reale di una push, soppressione quando la camera è già aperta, comportamento del click sulla notifica.
 
 ### Non letti
 - [ ] Verificare con due persone: pallino con il numero sulla camera e sulla voce "Camere" della barra in basso, aggiornamento in tempo reale senza ricaricare, azzeramento all'apertura della camera, "letto" condiviso tra PC e telefono dello stesso account.
