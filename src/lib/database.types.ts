@@ -221,18 +221,21 @@ export type Database = {
       AAA3_room_members: {
         Row: {
           joined_at: string
+          notifications_muted: boolean
           role: string
           room_id: string
           user_id: string
         }
         Insert: {
           joined_at?: string
+          notifications_muted?: boolean
           role: string
           room_id: string
           user_id: string
         }
         Update: {
           joined_at?: string
+          notifications_muted?: boolean
           role?: string
           room_id?: string
           user_id?: string
@@ -452,6 +455,10 @@ export type Database = {
       is_room_founder: { Args: { p_room_id: string }; Returns: boolean }
       is_room_member: { Args: { p_room_id: string }; Returns: boolean }
       revoke_room_invite: { Args: { invite_id: string }; Returns: undefined }
+      set_room_notifications_muted: {
+        Args: { p_muted: boolean; p_room_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never

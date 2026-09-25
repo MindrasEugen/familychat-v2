@@ -81,14 +81,6 @@ export function BellIcon(props: SVGProps<SVGSVGElement>) {
   )
 }
 
-export function BellOffIcon(props: SVGProps<SVGSVGElement>) {
-  return (
-    <Icon {...props}>
-      <path d="M6 8a6 6 0 0 1 9.3-5M18 8c0 7 3 8 3 8H9" />
-      <path d="M10 20a2 2 0 0 0 4 0M3 3l18 18" />
-    </Icon>
-  )
-}
 
 export function PhotoIcon(props: SVGProps<SVGSVGElement>) {
   return (

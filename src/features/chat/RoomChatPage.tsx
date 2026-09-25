@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { BackIcon, InfoIcon } from '../../components/icons'
 import { useAuthStatus } from '../auth/useAuthStatus'
+import { PushReminder } from '../notifications/PushControls'
 import { useDismissRoomNotifications } from '../notifications/usePushSubscription'
 import { useRoom, useRoomMembers } from '../rooms/useRoomDetail'
 import { MessageComposer } from './MessageComposer'
@@ -73,6 +74,10 @@ export function RoomChatPage() {
           <InfoIcon />
         </Link>
       </header>
+
+      <div className="chat-reminder">
+        <PushReminder userId={userId} />
+      </div>
 
       <div className="chat-scroll" ref={scrollRef}>
         {messagesQuery.isPending && <p className="muted center">Caricamento…</p>}

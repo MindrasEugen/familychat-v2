@@ -68,7 +68,9 @@ Deno.serve(async (req: Request) => {
       .from("AAA3_room_members")
       .select("user_id")
       .eq("room_id", message.room_id)
-      .neq("user_id", message.sender_id),
+      .neq("user_id", message.sender_id)
+      // Chi ha silenziato questa camera (Info camera) non riceve notifiche.
+      .eq("notifications_muted", false),
     supabase.from("AAA3_profiles").select("username").eq("id", message.sender_id).maybeSingle(),
   ]);
 
@@ -96,12 +98,16 @@ Deno.serve(async (req: Request) => {
     });
   }
 
+  // Stesso dispositivo iscritto con due account (multi-account) entrambi
+  // membri della camera: una sola notifica per endpoint, non due.
+  const uniqueSubs = [...new Map(subs.map((sub) => [sub.endpoint, sub])).values()];
+
   const title = sender?.username || "Nuovo messaggio";
   const bodyText = message.body ? message.body.slice(0, 120) : "📷 Foto";
   const notificationPayload = JSON.stringify({ title, body: bodyText, room_id: message.room_id });
 
   await Promise.all(
-    subs.map((sub) =>
+    uniqueSubs.map((sub) =>
       webpush
         .sendNotification({ endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } }, notificationPayload)
         .catch(async (err: { statusCode?: number }) => {
@@ -114,7 +120,7 @@ Deno.serve(async (req: Request) => {
     ),
   );
 
-  return new Response(JSON.stringify({ sent: subs.length }), {
+  return new Response(JSON.stringify({ sent: uniqueSubs.length }), {
     headers: { "Content-Type": "application/json" },
   });
 });

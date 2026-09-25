@@ -3,24 +3,78 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabaseClient'
 import { urlBase64ToUint8Array, VAPID_PUBLIC_KEY } from '../../lib/vapidKey'
 
-const STATUS_QUERY_KEY = ['push-subscription-status']
+const SERVICE_WORKER_TIMEOUT_MS = 5000
 
-type PushStatus = 'unsupported' | 'subscribed' | 'unsubscribed'
+export type PushStatus =
+  | 'subscribed'
+  | 'unsubscribed'
+  // Permesso negato nelle impostazioni del browser: da qui non si può
+  // richiedere di nuovo, va riattivato a mano.
+  | 'denied'
+  // iPhone/iPad: le notifiche web esistono solo nell'app installata sulla
+  // schermata Home, non in Safari.
+  | 'ios-needs-install'
+  | 'unsupported'
 
-// Fonte di verità: lo stato reale del PushManager di QUESTO dispositivo
-// (mai `navigator.serviceWorker.controller`, che può essere null anche a
-// registrazione avvenuta — vedi PROMPT_REACT_REWRITE.md lezione 3), non la
-// tabella AAA3_push_subscriptions (che elenca tutti i dispositivi di tutti,
-// non "questo").
-export function usePushSubscriptionStatus() {
+export function pushStatusQueryKey(userId: string | undefined) {
+  return ['push-subscription-status', userId] as const
+}
+
+function isIos() {
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+}
+
+function isStandalone() {
+  // navigator.standalone esiste solo su Safari iOS (non è nei tipi DOM).
+  return (
+    window.matchMedia('(display-mode: standalone)').matches ||
+    (navigator as Navigator & { standalone?: boolean }).standalone === true
+  )
+}
+
+function isBrave() {
+  return 'brave' in navigator
+}
+
+// `ready` non si risolve mai se il service worker non si è registrato:
+// senza un tetto la campanella resterebbe "in caricamento" per sempre.
+async function serviceWorkerRegistration(): Promise<ServiceWorkerRegistration | null> {
+  return Promise.race([
+    navigator.serviceWorker.ready,
+    new Promise<null>((resolve) => setTimeout(() => resolve(null), SERVICE_WORKER_TIMEOUT_MS)),
+  ])
+}
+
+// Stato PER ACCOUNT su questo dispositivo: il browser deve avere una
+// sottoscrizione (PushManager, mai `serviceWorker.controller` — lezione 3)
+// E il database deve avere la riga (utente, endpoint). Solo la prima non
+// basta: con due account sullo stesso telefono, o se la riga è andata persa,
+// la campanella risultava "attiva" senza che arrivasse nulla.
+export function usePushSubscriptionStatus(userId: string | undefined) {
   return useQuery({
-    queryKey: STATUS_QUERY_KEY,
+    queryKey: pushStatusQueryKey(userId),
     queryFn: async (): Promise<PushStatus> => {
-      if (!('serviceWorker' in navigator) || !('PushManager' in window)) return 'unsupported'
-      const registration = await navigator.serviceWorker.ready
+      if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
+        return isIos() && !isStandalone() ? 'ios-needs-install' : 'unsupported'
+      }
+      if (Notification.permission === 'denied') return 'denied'
+
+      const registration = await serviceWorkerRegistration()
+      if (!registration) return 'unsupported'
+
       const subscription = await registration.pushManager.getSubscription()
-      return subscription ? 'subscribed' : 'unsubscribed'
+      if (!subscription || !userId) return 'unsubscribed'
+
+      const { data, error } = await supabase
+        .from('AAA3_push_subscriptions')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('endpoint', subscription.endpoint)
+        .maybeSingle()
+      if (error) throw error
+      return data ? 'subscribed' : 'unsubscribed'
     },
+    enabled: Boolean(userId),
   })
 }
 
@@ -32,13 +86,31 @@ export function useEnablePush(userId: string | undefined) {
       if (!userId) throw new Error('Utente non disponibile.')
 
       const permission = await Notification.requestPermission()
-      if (permission !== 'granted') throw new Error('Permesso per le notifiche negato.')
+      if (permission !== 'granted') {
+        throw new Error('Permesso negato: riattiva le notifiche per questo sito nelle impostazioni del browser.')
+      }
 
-      const registration = await navigator.serviceWorker.ready
-      const subscription = await registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY) as BufferSource,
-      })
+      const registration = await serviceWorkerRegistration()
+      if (!registration) throw new Error('Il browser non ha avviato il servizio per le notifiche. Ricarica la pagina e riprova.')
+
+      // Riusa la sottoscrizione del dispositivo se c'è già (es. creata
+      // dall'altro account su questo telefono): è la stessa per tutti.
+      let subscription = await registration.pushManager.getSubscription()
+      if (!subscription) {
+        try {
+          subscription = await registration.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY) as BufferSource,
+          })
+        } catch {
+          throw new Error(
+            isBrave()
+              ? 'Brave blocca le notifiche: in Impostazioni → Privacy e sicurezza attiva "Usa i servizi Google per la messaggistica push", poi riprova.'
+              : 'Il browser non ha potuto attivare le notifiche. Riprova più tardi.',
+          )
+        }
+      }
+
       const json = subscription.toJSON()
       if (!json.endpoint || !json.keys?.p256dh || !json.keys?.auth) {
         throw new Error('Sottoscrizione push incompleta.')
@@ -46,11 +118,35 @@ export function useEnablePush(userId: string | undefined) {
 
       const { error } = await supabase.from('AAA3_push_subscriptions').upsert(
         { user_id: userId, endpoint: json.endpoint, p256dh: json.keys.p256dh, auth: json.keys.auth },
-        { onConflict: 'endpoint' },
+        { onConflict: 'user_id,endpoint' },
       )
       if (error) throw error
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: STATUS_QUERY_KEY }),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: pushStatusQueryKey(userId) }),
+  })
+}
+
+// Disattiva solo per QUESTO account: la sottoscrizione del browser resta,
+// perché l'altro account sullo stesso telefono potrebbe usarla. Senza la
+// riga nel database il server non manda più nulla a questo account.
+export function useDisablePush(userId: string | undefined) {
+  const queryClient = useQueryClient()
+
+  return useMutation<void, Error, void>({
+    mutationFn: async () => {
+      if (!userId) throw new Error('Utente non disponibile.')
+      const registration = await serviceWorkerRegistration()
+      const subscription = await registration?.pushManager.getSubscription()
+      if (!subscription) return
+
+      const { error } = await supabase
+        .from('AAA3_push_subscriptions')
+        .delete()
+        .eq('user_id', userId)
+        .eq('endpoint', subscription.endpoint)
+      if (error) throw error
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: pushStatusQueryKey(userId) }),
   })
 }
 
@@ -74,22 +170,4 @@ export function useDismissRoomNotifications(roomId: string | undefined) {
       })
       .catch(() => {})
   }, [roomId])
-}
-
-export function useDisablePush() {
-  const queryClient = useQueryClient()
-
-  return useMutation<void, Error, void>({
-    mutationFn: async () => {
-      const registration = await navigator.serviceWorker.ready
-      const subscription = await registration.pushManager.getSubscription()
-      if (!subscription) return
-
-      const endpoint = subscription.endpoint
-      await subscription.unsubscribe()
-      const { error } = await supabase.from('AAA3_push_subscriptions').delete().eq('endpoint', endpoint)
-      if (error) throw error
-    },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: STATUS_QUERY_KEY }),
-  })
 }

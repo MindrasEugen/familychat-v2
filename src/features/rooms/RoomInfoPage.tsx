@@ -2,7 +2,14 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Avatar } from '../../components/Avatar'
 import { CloseIcon } from '../../components/icons'
 import { useAuthStatus } from '../auth/useAuthStatus'
-import { useDeleteRoom, useLeaveRoom, useRemoveMember, useRoom, useRoomMembers } from './useRoomDetail'
+import {
+  useDeleteRoom,
+  useLeaveRoom,
+  useRemoveMember,
+  useRoom,
+  useRoomMembers,
+  useSetRoomNotificationsMuted,
+} from './useRoomDetail'
 import { useCreateRoomInvite, useRevokeRoomInvite, useRoomInvites } from './useRoomInvites'
 
 function InviteList({ roomId }: { roomId: string }) {
@@ -50,6 +57,7 @@ export function RoomInfoPage() {
   const leaveRoom = useLeaveRoom(roomId, userId)
   const removeMember = useRemoveMember(roomId)
   const deleteRoom = useDeleteRoom(userId)
+  const setMuted = useSetRoomNotificationsMuted(roomId, userId)
 
   if (roomQuery.isPending) return <p className="muted page-note">Caricamento…</p>
   if (roomQuery.isError || !roomQuery.data) {
@@ -61,6 +69,8 @@ export function RoomInfoPage() {
   }
 
   const isFounder = roomQuery.data.founder_id === userId
+  const myMembership = membersQuery.data?.find((member) => member.user_id === userId)
+  const notificationsOn = myMembership ? !myMembership.notifications_muted : undefined
 
   return (
     <>
@@ -75,6 +85,33 @@ export function RoomInfoPage() {
       </header>
 
       <section className="page-body">
+        {notificationsOn !== undefined && (
+          <div className="card">
+            <div className="row spread">
+              <div>
+                <span className="section-label">Notifiche di questa camera</span>
+                <p className="muted small">
+                  {notificationsOn
+                    ? 'Ricevi una notifica per ogni nuovo messaggio.'
+                    : 'Silenziata: nessuna notifica da questa camera.'}
+                </p>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={notificationsOn}
+                aria-label="Notifiche di questa camera"
+                className="switch"
+                onClick={() => setMuted.mutate(notificationsOn)}
+                disabled={setMuted.isPending}
+              >
+                <span className="switch-thumb" />
+              </button>
+            </div>
+            {setMuted.isError && <p role="alert">{setMuted.error.message}</p>}
+          </div>
+        )}
+
         <div className="card">
           <span className="section-label">Membri</span>
           {membersQuery.isPending && <p className="muted">Caricamento…</p>}

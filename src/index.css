@@ -981,3 +981,112 @@ input:-webkit-autofill:focus {
 .tutorial-actions button {
   flex: 1;
 }
+
+/* ---------- Notifiche ---------- */
+
+/* Campanella rossa = notifiche spente su questo dispositivo */
+.icon-btn.bell-off {
+  background: var(--danger);
+  color: var(--bg);
+}
+
+/* Avviso a tempo "notifiche spente": entra dall'alto e, allo scadere del
+   timer (PushControls.tsx), esce con una dissolvenza. */
+.push-reminder {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  background: var(--raised);
+  border: 1px solid var(--danger);
+  font-size: 14px;
+  animation: reminder-in 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
+  transition:
+    opacity 0.4s ease-in,
+    transform 0.4s ease-in;
+}
+.push-reminder.leaving {
+  opacity: 0;
+  transform: translateY(-8px);
+}
+.push-reminder-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  flex: none;
+  background: var(--danger);
+  color: var(--bg);
+}
+.push-reminder-icon svg {
+  width: 16px;
+  height: 16px;
+}
+.push-reminder-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.push-reminder > button:not(.btn-link) {
+  padding: 8px 14px;
+  flex: none;
+}
+.push-reminder .btn-link {
+  color: var(--muted);
+  display: grid;
+  place-items: center;
+}
+.push-reminder .btn-link svg {
+  width: 18px;
+  height: 18px;
+}
+@keyframes reminder-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .push-reminder {
+    animation: none;
+    transition: none;
+  }
+}
+.chat-reminder:not(:empty) {
+  padding: 10px 12px 0;
+}
+
+.small {
+  font-size: 13px;
+}
+
+/* Interruttore on/off (notifiche della camera) */
+.switch {
+  position: relative;
+  width: 50px;
+  height: 30px;
+  padding: 0;
+  border-radius: 999px;
+  background: var(--line);
+  flex: none;
+}
+.switch[aria-checked='true'] {
+  background: var(--accent);
+}
+.switch-thumb {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--surface);
+  transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.switch[aria-checked='true'] .switch-thumb {
+  transform: translateX(20px);
+}

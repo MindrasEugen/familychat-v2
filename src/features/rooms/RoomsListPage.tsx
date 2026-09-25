@@ -1,45 +1,17 @@
 import { useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { Avatar } from '../../components/Avatar'
-import { BellIcon, BellOffIcon } from '../../components/icons'
 import { useAuthStatus } from '../auth/useAuthStatus'
-import { useDisablePush, useEnablePush, usePushSubscriptionStatus } from '../notifications/usePushSubscription'
+import { PushBellButton, PushReminder } from '../notifications/PushControls'
 import { useCreateRoom, useJoinRoom, useRooms } from './useRooms'
-
-// Icona nell'header: campanella per attivare, campanella barrata per
-// disattivare. Gli errori li mostra la pagina (vedi RoomsListPage), perché
-// nell'header non c'è spazio per un messaggio.
-function PushToggle({ userId, onError }: { userId: string | undefined; onError: (message: string | null) => void }) {
-  const statusQuery = usePushSubscriptionStatus()
-  const enablePush = useEnablePush(userId)
-  const disablePush = useDisablePush()
-
-  if (statusQuery.data === 'unsupported' || !statusQuery.data) return null
-
-  const isSubscribed = statusQuery.data === 'subscribed'
-  const mutation = isSubscribed ? disablePush : enablePush
-
-  return (
-    <button
-      type="button"
-      className="icon-btn"
-      aria-label={isSubscribed ? 'Disattiva notifiche' : 'Attiva notifiche'}
-      title={isSubscribed ? 'Disattiva notifiche' : 'Attiva notifiche'}
-      disabled={mutation.isPending}
-      onClick={() => {
-        onError(null)
-        mutation.mutate(undefined, { onError: (error) => onError(error.message) })
-      }}
-    >
-      {isSubscribed ? <BellOffIcon /> : <BellIcon />}
-    </button>
-  )
-}
 
 export function RoomsListPage() {
   const { session, profile } = useAuthStatus()
   const userId = session?.user.id
   const [pushError, setPushError] = useState<string | null>(null)
+  // Cambiarlo rimonta l'avviso sulle notifiche, che ricompare con il suo
+  // timer: la campanella lo usa quando da lì non si può attivare nulla.
+  const [reminderKey, setReminderKey] = useState(0)
 
   const roomsQuery = useRooms(userId)
   const createRoom = useCreateRoom(userId)
@@ -75,10 +47,15 @@ export function RoomsListPage() {
             {roomCount !== undefined && ` · ${roomCount} ${roomCount === 1 ? 'camera' : 'camere'}`}
           </small>
         </div>
-        <PushToggle userId={userId} onError={setPushError} />
+        <PushBellButton
+          userId={userId}
+          onError={setPushError}
+          onNeedsExplanation={() => setReminderKey((key) => key + 1)}
+        />
       </header>
 
       <section className="page-body">
+        <PushReminder key={reminderKey} userId={userId} />
         {pushError && <p role="alert">{pushError}</p>}
 
         {roomsQuery.isPending && <p className="muted">Caricamento…</p>}
