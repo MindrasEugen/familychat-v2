@@ -903,3 +903,81 @@ input:-webkit-autofill:focus {
 .viewer-nav.next {
   right: 12px;
 }
+
+/* ---------- Tutorial di benvenuto ---------- */
+
+.tutorial {
+  width: min(420px, calc(100% - 32px));
+  max-height: calc(100% - 32px);
+  margin: auto;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow);
+}
+.tutorial::backdrop {
+  background: var(--overlay);
+}
+.tutorial-card {
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.tutorial-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.tutorial-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 18px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  display: grid;
+  place-items: center;
+}
+.tutorial-icon svg {
+  width: 28px;
+  height: 28px;
+}
+.tutorial-text {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 150px;
+}
+.tutorial-text h2 {
+  font-size: 22px;
+  line-height: 1.2;
+}
+.tutorial-text p {
+  color: var(--muted);
+  line-height: 1.55;
+}
+.tutorial-dots {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+}
+.tutorial-dots .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--line);
+}
+.tutorial-dots .dot.active {
+  width: 22px;
+  background: var(--accent);
+}
+.tutorial-actions {
+  display: flex;
+  gap: 10px;
+}
+.tutorial-actions button {
+  flex: 1;
+}

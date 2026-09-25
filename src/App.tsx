@@ -21,6 +21,7 @@ import { RoomChatPage } from './features/chat/RoomChatPage'
 import { RoomInfoPage } from './features/rooms/RoomInfoPage'
 import { RoomsListPage } from './features/rooms/RoomsListPage'
 import { TranslatorPage } from './features/translator/TranslatorPage'
+import { WelcomeTutorial } from './features/tutorial/WelcomeTutorial'
 import { queryClient } from './lib/queryClient'
 
 // Tiene le etichette dello switcher (username/avatar) allineate al profilo
@@ -147,6 +148,7 @@ function AppLayout() {
         />
       </Routes>
       <TabBar />
+      <WelcomeTutorial />
     </>
   )
 }

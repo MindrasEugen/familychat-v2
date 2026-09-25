@@ -74,3 +74,22 @@ export function useCompleteProfile(userId: string | undefined) {
     },
   })
 }
+
+// Segna il tutorial di benvenuto come visto (una volta per persona, vedi
+// migrazione 20260925120000). Aggiorna subito la cache del profilo così il
+// tutorial non ricompare nemmeno se la richiesta è ancora in volo.
+export function useMarkTutorialSeen(userId: string | undefined) {
+  const queryClient = useQueryClient()
+
+  return useMutation<void, PostgrestError | Error, void>({
+    mutationFn: async () => {
+      if (!userId) throw new Error('Nessun utente autenticato.')
+      const seenAt = new Date().toISOString()
+      queryClient.setQueryData<Profile | null>(profileQueryKey(userId), (profile) =>
+        profile ? { ...profile, tutorial_seen_at: seenAt } : profile,
+      )
+      const { error } = await supabase.from('AAA3_profiles').update({ tutorial_seen_at: seenAt }).eq('id', userId)
+      if (error) throw error
+    },
+  })
+}
