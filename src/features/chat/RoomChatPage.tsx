@@ -5,6 +5,7 @@ import { useAuthStatus } from '../auth/useAuthStatus'
 import { PushReminder } from '../notifications/PushControls'
 import { useDismissRoomNotifications } from '../notifications/usePushSubscription'
 import { useRoom, useRoomMembers } from '../rooms/useRoomDetail'
+import { useMarkRoomRead } from '../rooms/useRooms'
 import { MessageComposer } from './MessageComposer'
 import { MessageList, type MemberInfo } from './MessageList'
 import { MESSAGES_PAGE_SIZE, useLoadOlderMessages, useMessages, useRoomMessagesRealtime } from './useMessages'
@@ -43,6 +44,7 @@ export function RoomChatPage() {
   // ancora montata e il primo scroll andrebbe perso.
   const lastMessageId = messagesQuery.data?.at(-1)?.id
   const roomReady = Boolean(roomQuery.data)
+  useMarkRoomRead(roomId, userId, lastMessageId)
   useEffect(() => {
     const scroller = scrollRef.current
     if (scroller && lastMessageId) scroller.scrollTop = scroller.scrollHeight

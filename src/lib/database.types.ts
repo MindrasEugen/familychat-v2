@@ -221,6 +221,7 @@ export type Database = {
       AAA3_room_members: {
         Row: {
           joined_at: string
+          last_read_at: string
           notifications_muted: boolean
           role: string
           room_id: string
@@ -228,6 +229,7 @@ export type Database = {
         }
         Insert: {
           joined_at?: string
+          last_read_at?: string
           notifications_muted?: boolean
           role: string
           room_id: string
@@ -235,6 +237,7 @@ export type Database = {
         }
         Update: {
           joined_at?: string
+          last_read_at?: string
           notifications_muted?: boolean
           role?: string
           room_id?: string
@@ -453,7 +456,23 @@ export type Database = {
         }
       }
       is_room_founder: { Args: { p_room_id: string }; Returns: boolean }
+      get_my_rooms: {
+        Args: never
+        Returns: {
+          created_at: string
+          founder_id: string
+          id: string
+          last_message_at: string | null
+          last_message_body: string | null
+          last_message_photo_count: number
+          last_message_sender_id: string | null
+          last_message_sender_name: string | null
+          name: string
+          unread_count: number
+        }[]
+      }
       is_room_member: { Args: { p_room_id: string }; Returns: boolean }
+      mark_room_read: { Args: { p_room_id: string }; Returns: undefined }
       revoke_room_invite: { Args: { invite_id: string }; Returns: undefined }
       set_room_notifications_muted: {
         Args: { p_muted: boolean; p_room_id: string }

@@ -20,6 +20,7 @@ import { useAuthStatus } from './features/auth/useAuthStatus'
 import { RoomChatPage } from './features/chat/RoomChatPage'
 import { RoomInfoPage } from './features/rooms/RoomInfoPage'
 import { RoomsListPage } from './features/rooms/RoomsListPage'
+import { useRooms, useRoomsRealtime } from './features/rooms/useRooms'
 import { TranslatorPage } from './features/translator/TranslatorPage'
 import { WelcomeTutorial } from './features/tutorial/WelcomeTutorial'
 import { queryClient } from './lib/queryClient'
@@ -38,8 +39,15 @@ function useSyncActiveAccountProfile() {
 // Barra in basso, solo per chi ha fatto l'accesso. Nascosta dentro una
 // chat: lì il fondo dello schermo è della barra di scrittura.
 function TabBar() {
-  const { status } = useAuthStatus()
+  const { status, session } = useAuthStatus()
   const inChat = useMatch('/rooms/:roomId/*')
+  // Qui e non nella lista camere: la barra è montata su tutte le pagine
+  // dopo l'accesso, così il pallino dei non letti su "Camere" resta
+  // aggiornato anche dal traduttore o dall'account.
+  const userId = session?.user.id
+  const roomsQuery = useRooms(userId)
+  useRoomsRealtime(userId)
+  const totalUnread = roomsQuery.data?.reduce((sum, room) => sum + room.unread_count, 0) ?? 0
 
   if (status !== 'authenticated' || inChat) return null
 
@@ -47,7 +55,14 @@ function TabBar() {
     <nav className="tabbar" aria-label="Navigazione principale">
       <div className="tabbar-inner">
         <NavLink to="/rooms">
-          <ChatIcon />
+          <span className="tab-icon">
+            <ChatIcon />
+            {totalUnread > 0 && (
+              <span className="tab-badge" aria-label={`${totalUnread} messaggi non letti`}>
+                {totalUnread > 99 ? '99+' : totalUnread}
+              </span>
+            )}
+          </span>
           Camere
         </NavLink>
         <NavLink to="/translator">

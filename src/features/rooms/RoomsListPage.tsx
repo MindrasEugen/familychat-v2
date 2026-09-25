@@ -3,7 +3,30 @@ import { Link } from 'react-router-dom'
 import { Avatar } from '../../components/Avatar'
 import { useAuthStatus } from '../auth/useAuthStatus'
 import { PushBellButton, PushReminder } from '../notifications/PushControls'
-import { useCreateRoom, useJoinRoom, useRooms } from './useRooms'
+import { useCreateRoom, useJoinRoom, useRooms, type RoomOverview } from './useRooms'
+
+// Anteprima dell'ultimo messaggio, nella lingua originale (tradurre anche
+// le anteprime moltiplicherebbe le chiamate al traduttore).
+function lastMessagePreview(room: RoomOverview, currentUserId: string | undefined) {
+  if (!room.last_message_at) return 'Nessun messaggio ancora'
+  const who = room.last_message_sender_id === currentUserId ? 'Tu' : (room.last_message_sender_name ?? 'Qualcuno')
+  const photos = room.last_message_photo_count
+  const text = room.last_message_body?.trim() || (photos > 1 ? `📷 ${photos} foto` : '📷 Foto')
+  return `${who}: ${text}`
+}
+
+// Oggi → ora, ieri → "ieri", ultima settimana → giorno, altrimenti data.
+function formatRoomTime(iso: string) {
+  const date = new Date(iso)
+  const now = new Date()
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
+  const dayMs = 24 * 60 * 60 * 1000
+  const time = date.getTime()
+  if (time >= startOfToday) return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  if (time >= startOfToday - dayMs) return 'ieri'
+  if (time >= startOfToday - 6 * dayMs) return date.toLocaleDateString([], { weekday: 'short' })
+  return date.toLocaleDateString([], { day: '2-digit', month: '2-digit', year: '2-digit' })
+}
 
 export function RoomsListPage() {
   const { session, profile } = useAuthStatus()
@@ -65,19 +88,32 @@ export function RoomsListPage() {
         )}
         {roomsQuery.data && roomsQuery.data.length > 0 && (
           <ul className="room-list">
-            {roomsQuery.data.map((room) => (
-              <li key={room.id}>
-                <Link to={`/rooms/${room.id}`} className="room-item">
-                  <span className="room-tile" aria-hidden="true">
-                    {room.name.trim().charAt(0).toUpperCase() || '?'}
-                  </span>
-                  <span className="meta">
-                    <b>{room.name}</b>
-                    <span>Tocca per aprire la chat</span>
-                  </span>
-                </Link>
-              </li>
-            ))}
+            {roomsQuery.data.map((room) => {
+              const hasUnread = room.unread_count > 0
+              return (
+                <li key={room.id}>
+                  <Link to={`/rooms/${room.id}`} className={hasUnread ? 'room-item unread' : 'room-item'}>
+                    <span className="room-tile" aria-hidden="true">
+                      {room.name.trim().charAt(0).toUpperCase() || '?'}
+                    </span>
+                    <span className="meta">
+                      <b>{room.name}</b>
+                      <span>{lastMessagePreview(room, userId)}</span>
+                    </span>
+                    <span className="room-side">
+                      {room.last_message_at && (
+                        <time dateTime={room.last_message_at}>{formatRoomTime(room.last_message_at)}</time>
+                      )}
+                      {hasUnread && (
+                        <span className="unread-badge" aria-label={`${room.unread_count} non letti`}>
+                          {room.unread_count > 99 ? '99+' : room.unread_count}
+                        </span>
+                      )}
+                    </span>
+                  </Link>
+                </li>
+              )
+            })}
           </ul>
         )}
 
