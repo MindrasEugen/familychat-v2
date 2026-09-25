@@ -12,14 +12,20 @@ in `NOTE.md` — consultarlo per il "perché" dietro una scelta già presa.
 ## Da fare
 
 ### Autenticazione
-- [ ] **Azione richiesta all'utente**: aggiungere `http://localhost:5173/reset-password` (e l'equivalente dominio di produzione, quando esisterà) alle Redirect URLs del progetto Supabase (`qamvkevkddfwyxhbftoy`) da Dashboard → Authentication → URL Configuration — senza questo, il recupero password resta bloccato in pratica anche se il codice è già implementato e verificato (vedi `NOTE.md`, 2026-09-07). Nessuno strumento disponibile da qui può impostarlo al posto dell'utente.
+- [ ] **Azione richiesta all'utente**: aggiungere alle Redirect URLs del progetto Supabase (`qamvkevkddfwyxhbftoy`, Dashboard → Authentication → URL Configuration) sia `http://localhost:5173/reset-password` sia il dominio di produzione ora esistente (servizio Render della v2, `https://<dominio>.onrender.com/**`) — senza questo, il link di recupero password non riporta all'app (vedi `NOTE.md`, 2026-09-07). Nessuno strumento disponibile da qui può impostarlo al posto dell'utente; non ancora confermato fatto.
 
 ### Chat
 - [ ] Testare l'invio foto con un vero file HEIC (nessun campione disponibile finora — verificato solo il percorso PNG/JPEG via `createImageBitmap`, vedi `NOTE.md`, 2026-09-07).
 
 ### Traduzione (Edge Function)
-- [ ] **Azione richiesta all'utente**: procurarsi le chiavi `GOOGLE_TRANSLATE_API_KEY` e/o `AZURE_TRANSLATOR_KEY` (vedi `supabase/functions/.env.example` per le istruzioni) — senza di esse la traduzione funziona già ma passa sempre da Mistral (unico livello oggi configurato).
-- [ ] Traduzione automatica in chat non ancora testata con Google/Azure attivi (nessuna chiave disponibile finora) — solo il fallback Mistral è stato verificato end-to-end.
+- [ ] Livello Azure configurato (regione `northeurope`) ma mai esercitato davvero: entra in gioco solo se Google fallisce. Verificarlo forzando un fallimento di Google (es. in un ambiente di prova) prima di contarci.
+- [ ] **Azione dell'utente, al momento dell'upgrade**: Google Cloud è in free trial, dove le quote non sono modificabili. Quando si passa all'account a pagamento, impostare subito "Characters per day" (~15.000) nelle quote di Cloud Translation API, prima di qualunque addebito (vedi `supabase/functions/.env.example`).
+- [ ] **Concordato con l'utente, da fare più avanti**: glossario di nomi/soprannomi di famiglia da NON tradurre (marcati come non traducibili nelle richieste a Google/Azure). Scartati invece il glossario di sostituzioni cieche (ambiguo, es. "bomba → awesome") e le correzioni passate come esempi a un LLM (costo/prevedibilità) — vedi `NOTE.md`, 2026-09-25.
+- [ ] Idea in attesa, non richiesta: passare la lingua di partenza invece dell'auto-rilevamento (messaggi corti rilevati male: `la`, `de`, `it` su testi probabilmente rumeni). L'utente preferisce osservare prima.
+
+### Grafica
+- [ ] **Verificare in browser** le schermate dopo l'accesso (lista camere, chat, Info camera, traduttore, Account) in formato telefono e desktop, in entrambi i temi — il 2026-09-25 è stata vista solo la pagina di accesso (l'accesso con password va fatto dall'utente).
+- [ ] Provare su un telefono vero: barra in basso e barra di scrittura con le safe area (notch/gesture bar), app installata (PWA) con il colore di sistema del tema.
 
 ### Notifiche push
 - [ ] **Verifica con un vero permesso di notifica** (browser non automatizzato): ricezione reale di una push, soppressione quando la camera è già aperta, comportamento del click sulla notifica.
@@ -32,4 +38,5 @@ in `NOTE.md` — consultarlo per il "perché" dietro una scelta già presa.
 ## Note di processo
 - Le decisioni architetturali (modello camere, traduzione, memoria traduzioni, librerie, backend/hosting) sono già prese in `PROMPT_REACT_REWRITE.md` — non richiedono un altro giro di analisi.
 - Task ben specificati su singoli pezzi (un componente, una query, uno stile) sono delegabili ai worker configurati, secondo le regole di delega globali dell'utente. Le decisioni architetturali sopra elencate (schema DB, ruoli, catena di fallback traduzione) restano non delegabili in blocco — vanno prese/guidate direttamente, l'implementazione dei pezzi conseguenti sì.
+- **pnpm e `C:\Users\mandr`**: nella cartella utente esistono `package.json`/`pnpm-lock.yaml`/`pnpm-workspace.yaml` di un vecchio esercizio Prisma, che pnpm 11 tratta come workspace padre. Effetti osservati il 2026-09-25: `pnpm add` aggiorna il lockfile sbagliato (quello del progetto resta indietro e la build Render con `--frozen-lockfile` fallirebbe), e `pnpm test`/`pnpm lint` si bloccano sul controllo dipendenze. Finché quei file restano lì: installare con `pnpm install --ignore-workspace` (o `pnpm add ... --ignore-workspace`), lanciare test/lint con `npx vitest run` / `npx oxlint`, e controllare sempre che `pnpm-lock.yaml` del progetto sia cambiato.
 - Prima di introdurre qualunque libreria/servizio esterno nuovo, verificare se il backend Supabase esistente offre già una capacità equivalente; se si decide di non riusarla, fermarsi e chiedere (vedi regola globale, osservata su un caso reale in v1: traduzione instradata verso un servizio pubblico esterno pur avendo trovato ed escluso la Edge Function già esistente).

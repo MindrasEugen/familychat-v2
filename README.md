@@ -19,6 +19,10 @@ pnpm test:e2e        # test end-to-end (Playwright)
 pnpm lint            # oxlint
 ```
 
+Se pnpm si comporta in modo strano (lockfile del progetto non aggiornato,
+`pnpm test`/`pnpm lint` bloccati sul controllo dipendenze), vedi la nota su
+`C:\Users\mandr` nelle "Note di processo" di `PLAN.md`.
+
 ## Configurazione
 
 Copia `.env.example` in `.env.local` e valorizza `VITE_SUPABASE_URL` /
@@ -32,12 +36,15 @@ della v1, non un progetto nuovo (vedi `PROMPT_REACT_REWRITE.md`,
 ```
 src/
   lib/            # client Supabase, QueryClient di TanStack Query
+  components/     # pezzi grafici condivisi (icone, avatar)
+  index.css       # token colore dei due temi e stili dell'app
   features/
     auth/         # login/registrazione, profilo personale
     rooms/        # elenco camere, creazione, inviti
     chat/         # singola camera: cronologia, invio, traduzione inline
     translator/   # traduttore standalone, indipendente dalla chat
     notifications/ # service worker, Web Push
+    theme/        # tema scuro (predefinito) / chiaro, scelta salvata
 tests/e2e/        # test Playwright
 ```
 
@@ -47,5 +54,8 @@ della v1, vedi `PROMPT_REACT_REWRITE.md` lezione 7).
 
 ## Stato
 
-Solo scaffold: routing e struttura pronti, nessuna feature reale ancora
-implementata. Vedi `PLAN.md` per l'elenco dettagliato di cosa manca.
+Funzionalità principali implementate (accesso e multi-account, camere e
+inviti, chat con foto e traduzione automatica Google → Azure → Mistral,
+notifiche push, PWA) e nuova grafica con tema scuro/chiaro. Online su
+Render in parallelo alla v1. Vedi `PLAN.md` per cosa resta aperto e
+`NOTE.md` per lo storico.
