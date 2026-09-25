@@ -12,7 +12,7 @@ in `NOTE.md` — consultarlo per il "perché" dietro una scelta già presa.
 ## Da fare
 
 ### Autenticazione
-- [ ] **Azione richiesta all'utente**: aggiungere alle Redirect URLs del progetto Supabase (`qamvkevkddfwyxhbftoy`, Dashboard → Authentication → URL Configuration) sia `http://localhost:5173/reset-password` sia il dominio di produzione ora esistente (servizio Render della v2, `https://<dominio>.onrender.com/**`) — senza questo, il link di recupero password non riporta all'app (vedi `NOTE.md`, 2026-09-07). Nessuno strumento disponibile da qui può impostarlo al posto dell'utente; non ancora confermato fatto.
+- [ ] **Azione richiesta all'utente**: aggiungere alle Redirect URLs del progetto Supabase (`qamvkevkddfwyxhbftoy`, Dashboard → Authentication → URL Configuration) sia `http://localhost:5173/reset-password` sia il dominio di produzione `https://familychat-v2.onrender.com/**` — senza questo, il link di recupero password non riporta all'app (vedi `NOTE.md`, 2026-09-07). Nessuno strumento disponibile da qui può impostarlo al posto dell'utente; non ancora confermato fatto.
 
 ### Chat
 - [ ] Testare l'invio foto con un vero file HEIC (nessun campione disponibile finora — verificato solo il percorso PNG/JPEG via `createImageBitmap`, vedi `NOTE.md`, 2026-09-07).
@@ -21,6 +21,7 @@ in `NOTE.md` — consultarlo per il "perché" dietro una scelta già presa.
 - [ ] Livello Azure configurato (regione `northeurope`) ma mai esercitato davvero: entra in gioco solo se Google fallisce. Verificarlo forzando un fallimento di Google (es. in un ambiente di prova) prima di contarci.
 - [ ] **Azione dell'utente, al momento dell'upgrade**: Google Cloud è in free trial, dove le quote non sono modificabili. Quando si passa all'account a pagamento, impostare subito "Characters per day" (~15.000) nelle quote di Cloud Translation API, prima di qualunque addebito (vedi `supabase/functions/.env.example`).
 - [ ] **Concordato con l'utente, da fare più avanti**: glossario di nomi/soprannomi di famiglia da NON tradurre (marcati come non traducibili nelle richieste a Google/Azure). Scartati invece il glossario di sostituzioni cieche (ambiguo, es. "bomba → awesome") e le correzioni passate come esempi a un LLM (costo/prevedibilità) — vedi `NOTE.md`, 2026-09-25.
+- [ ] Verificare in chat che i messaggi di sole emoji/punteggiatura restino senza "Tradotto" né "Correggi traduzione" (correzione del 2026-09-25). Le vecchie voci Mistral in memoria con frasi miste (testo + emoji) potrebbero avere l'emoji alterata: si sistemano con "Correggi" se capita di vederle.
 - [ ] Idea in attesa, non richiesta: passare la lingua di partenza invece dell'auto-rilevamento (messaggi corti rilevati male: `la`, `de`, `it` su testi probabilmente rumeni). L'utente preferisce osservare prima.
 
 ### Grafica

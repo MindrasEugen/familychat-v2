@@ -174,6 +174,7 @@ fondo restano in `PROMPT_REACT_REWRITE.md` (non ripetute qui).
 
 ### 2026-09-25 — Deploy su Render
 - Creato dall'utente un Static Site su Render per questo repo (branch `master`, build `pnpm install --frozen-lockfile; pnpm run build`, publish `dist`, rewrite `/*` → `/index.html` per React Router, variabili `VITE_SUPABASE_URL`/`VITE_SUPABASE_ANON_KEY` con la chiave anon legacy). Prima build riuscita; la v1 (`chat-famiglia`) resta attiva in parallelo.
+- Regola di rewrite mancante al primo rilascio (refresh su `/rooms`, `/account`… → "Not Found" su mobile): aggiunta dall'utente dal pannello Render, verificato con `curl` (tutte le pagine 200, `manifest.json` e icone ancora serviti come file). Soluzione documentata nell'archivio globale: `%USERPROFILE%\.claude\archive\render-static-site-react-router-not-found-al-refresh.md`. URL: `https://familychat-v2.onrender.com`.
 
 ### 2026-09-25 — Nuova grafica (stile caldo, tema scuro predefinito)
 - Anteprima statica approvata dall'utente prima di toccare il codice (4 schermate, entrambi i temi).
@@ -207,3 +208,7 @@ fondo restano in `PROMPT_REACT_REWRITE.md` (non ripetute qui).
 - "Letto" per persona, non per dispositivo. La camera si segna letta quando è aperta e visibile: all'apertura, a ogni messaggio nuovo e al ritorno in primo piano; il contatore in cache si azzera subito.
 - Lista camere: anteprima dell'ultimo messaggio in lingua originale (tradurre le anteprime moltiplicherebbe le chiamate), ora/ieri/giorno/data, pallino con il numero. Pallino col totale anche su "Camere" nella barra in basso. Aggiornamento in tempo reale da un canale sui messaggi senza filtro (il realtime rispetta le RLS), montato nella barra in basso così vale su tutte le pagine; stesso recupero del canale di `useRoomMessagesRealtime`.
 - Corretto di passaggio: il selettore `.room-item span` colorava di grigio anche l'iniziale della camera (e avrebbe colpito i pallini): ristretto a `.room-item .meta > span`.
+
+### 2026-09-25 — Emoji "tradotte" da Mistral
+- Nella memoria traduzioni: `😘` → "Ti amo" e `?` → "da" (rumeno), entrambe di Mistral, create prima dell'attivazione di Google (Google lascia le emoji invariate). Servite dalla cache a ogni nuovo messaggio identico, con l'etichetta "Tradotto".
+- Un testo senza lettere (`\p{L}`) non viene più tradotto: il client non chiama né legge la cache (così le vecchie voci errate non vengono più usate, nessuna cancellazione necessaria) e non mostra "Correggi traduzione"; la Edge Function, come difesa, risponde con il testo invariato (`sourceLang: "und"`) senza chiamare servizi né scrivere in cache (verificato con 😘). Prompt di Mistral: emoji, emoticon, numeri, URL e punteggiatura restano come sono anche nelle frasi miste.
