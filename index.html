@@ -1,13 +1,23 @@
 <!doctype html>
-<html lang="en">
+<html lang="it" data-theme="dark">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" href="/icons/icon-192.png" />
     <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
     <link rel="manifest" href="/manifest.json" />
-    <meta name="theme-color" content="#ffffff" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>familychat-v2</title>
+    <meta name="theme-color" content="#1b1614" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>Chat Famiglia</title>
+    <script>
+      // Applica il tema salvato prima del primo disegno, per evitare un lampo
+      // del tema sbagliato. Stessa chiave di src/features/theme/themeStore.ts.
+      try {
+        if (localStorage.getItem('familychat.theme') === 'light') {
+          document.documentElement.dataset.theme = 'light'
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#fbf5f1')
+        }
+      } catch (e) {}
+    </script>
   </head>
   <body>
     <div id="root"></div>

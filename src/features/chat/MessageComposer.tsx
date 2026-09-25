@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent } from 'react'
+import { PhotoIcon, SendIcon } from '../../components/icons'
 import { MAX_PHOTOS_PER_MESSAGE, useSendMessage } from './useMessages'
 
 export function MessageComposer({
@@ -59,43 +60,52 @@ export function MessageComposer({
   }
 
   return (
-    <form onSubmit={handleSubmit}>
-      <label>
-        Messaggio
+    <form onSubmit={handleSubmit} className="composer">
+      {tooManyMessage && <p role="alert">{tooManyMessage}</p>}
+      {sendMessage.isError && <p role="alert">{sendMessage.error.message}</p>}
+      {previewUrls.length > 0 && (
+        <div className="photo-previews">
+          {previewUrls.map((url) => (
+            <img key={url} src={url} alt="Anteprima foto selezionata" />
+          ))}
+          <button
+            type="button"
+            className="btn-link"
+            onClick={clearPhotoSelection}
+            disabled={sendMessage.isPending}
+          >
+            Rimuovi foto
+          </button>
+        </div>
+      )}
+      <div className="composer-row">
+        {/* Il vero input file è nascosto: il click sull'icona lo apre (è
+            dentro la label), e resta raggiungibile da tastiera. */}
+        <label className="icon-btn photo-picker" title={`Allega foto (fino a ${MAX_PHOTOS_PER_MESSAGE})`}>
+          <PhotoIcon />
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            multiple
+            className="visually-hidden"
+            aria-label={`Allega foto (fino a ${MAX_PHOTOS_PER_MESSAGE})`}
+            onChange={handleFileChange}
+            disabled={sendMessage.isPending}
+          />
+        </label>
         <input
           type="text"
+          aria-label="Messaggio"
           value={body}
           onChange={(event) => setBody(event.target.value)}
           placeholder="Scrivi un messaggio"
           disabled={sendMessage.isPending}
         />
-      </label>
-      <label>
-        Foto (fino a {MAX_PHOTOS_PER_MESSAGE})
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          multiple
-          onChange={handleFileChange}
-          disabled={sendMessage.isPending}
-        />
-      </label>
-      {tooManyMessage && <p role="alert">{tooManyMessage}</p>}
-      {previewUrls.length > 0 && (
-        <p>
-          {previewUrls.map((url) => (
-            <img key={url} src={url} alt="Anteprima foto selezionata" style={{ maxWidth: 120, marginRight: 4 }} />
-          ))}
-          <button type="button" onClick={clearPhotoSelection} disabled={sendMessage.isPending}>
-            Rimuovi foto
-          </button>
-        </p>
-      )}
-      <button type="submit" disabled={sendMessage.isPending}>
-        Invia
-      </button>
-      {sendMessage.isError && <p role="alert">{sendMessage.error.message}</p>}
+        <button type="submit" className="send-btn" aria-label="Invia" disabled={sendMessage.isPending}>
+          <SendIcon />
+        </button>
+      </div>
     </form>
   )
 }

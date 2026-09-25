@@ -1,6 +1,7 @@
 import type { PostgrestError } from '@supabase/supabase-js'
 import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from 'react'
 import { describeProfileInsertError } from './errors'
+import { Brand } from './LoginPage'
 import { useAuthStatus } from './useAuthStatus'
 import { useCompleteProfile } from './useProfile'
 
@@ -48,11 +49,14 @@ export function CompleteProfilePage() {
       : null)
 
   return (
-    <section>
-      <h1>Completa il profilo</h1>
-      <p>Scegli lo username con cui la famiglia ti vedrà nelle camere.</p>
-      <form onSubmit={handleSubmit}>
-        <label>
+    <section className="auth-page">
+      <Brand />
+      <div className="intro">
+        <h1>Completa il profilo</h1>
+        <p className="muted">Scegli lo username con cui la famiglia ti vedrà nelle camere.</p>
+      </div>
+      <form onSubmit={handleSubmit} className="stack">
+        <label className="field">
           Username
           <input
             type="text"
@@ -61,11 +65,11 @@ export function CompleteProfilePage() {
             required
           />
         </label>
-        <label>
+        <label className="field">
           Foto profilo (opzionale)
           <input type="file" accept="image/*" onChange={handleAvatarChange} />
         </label>
-        {previewUrl && <img src={previewUrl} alt="Anteprima foto profilo" style={{ maxWidth: 100 }} />}
+        {previewUrl && <img src={previewUrl} alt="Anteprima foto profilo" className="avatar-preview" />}
         {errorMessage && <p role="alert">{errorMessage}</p>}
         <button type="submit" disabled={completeProfile.isPending}>
           Continua

@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { useState, type FormEvent } from 'react'
+import { Avatar } from '../../components/Avatar'
 import { getDeviceLang } from '../../lib/deviceLang'
 import { supabase } from '../../lib/supabaseClient'
 import type { Database } from '../../lib/database.types'
@@ -7,6 +8,11 @@ import { useDeleteMessage } from './useMessages'
 import { useCorrectTranslation, useMessageTranslation } from './useTranslation'
 
 type Message = Database['public']['Tables']['AAA3_chat_messages']['Row']
+
+export interface MemberInfo {
+  username: string | null
+  avatarUrl: string | null
+}
 
 const SIGNED_URL_TTL_SECONDS = 3600
 
@@ -26,10 +32,12 @@ function MessageImage({ imagePath }: { imagePath: string }) {
     staleTime: (SIGNED_URL_TTL_SECONDS / 2) * 1000,
   })
 
-  if (signedUrlQuery.isPending) return <p>Caricamento foto…</p>
-  if (signedUrlQuery.isError || !signedUrlQuery.data) return <p>Foto non disponibile.</p>
+  if (signedUrlQuery.isPending) return <div className="photo-placeholder">Caricamento foto…</div>
+  if (signedUrlQuery.isError || !signedUrlQuery.data) {
+    return <div className="photo-placeholder">Foto non disponibile.</div>
+  }
 
-  return <img src={signedUrlQuery.data} alt="Foto in chat" style={{ maxWidth: 300 }} />
+  return <img src={signedUrlQuery.data} alt="Foto in chat" />
 }
 
 // Traduzione automatica nella lingua del dispositivo di chi legge (stessa
@@ -72,46 +80,53 @@ function MessageBody({ body, currentUserId }: { body: string; currentUserId: str
 
   return (
     <>
-      : {isTranslated ? translated : body}
-      {isTranslated && (
-        <span title="Messaggio tradotto automaticamente" style={{ marginLeft: '0.25em' }}>
-          🌐
+      <p>{isTranslated ? translated : body}</p>
+      {translationQuery.data && !isCorrecting && (
+        // Pillola verde solo se il testo è davvero tradotto; altrimenti
+        // (stessa lingua, o eco) resta solo il link discreto per correggere.
+        <span className={isTranslated ? 'translated' : 'translated plain'}>
+          {isTranslated && <span title="Messaggio tradotto automaticamente">Tradotto</span>}
+          <button type="button" className="btn-link" onClick={startCorrecting}>
+            {isTranslated ? 'Correggi' : 'Correggi traduzione'}
+          </button>
         </span>
       )}
-      {translationQuery.data && !isCorrecting && (
-        <button type="button" onClick={startCorrecting} style={{ marginLeft: '0.5em' }}>
-          Correggi traduzione
-        </button>
-      )}
-      {correctTranslation.isError && <span role="alert"> {correctTranslation.error.message}</span>}
+      {correctTranslation.isError && <span role="alert">{correctTranslation.error.message}</span>}
       {isCorrecting && (
-        <form onSubmit={handleCorrectionSubmit} style={{ display: 'inline-block', marginLeft: '0.5em' }}>
+        <form onSubmit={handleCorrectionSubmit} className="correction-form">
           <input
             type="text"
+            aria-label="Traduzione corretta"
             value={correctionText}
             onChange={(event) => setCorrectionText(event.target.value)}
           />
-          <button type="submit" disabled={correctTranslation.isPending}>
-            Salva
-          </button>
-          <button type="button" onClick={() => setIsCorrecting(false)}>
-            Annulla
-          </button>
+          <div className="row">
+            <button type="submit" disabled={correctTranslation.isPending}>
+              Salva
+            </button>
+            <button type="button" className="btn-link" onClick={() => setIsCorrecting(false)}>
+              Annulla
+            </button>
+          </div>
         </form>
       )}
     </>
   )
 }
 
+function formatTime(iso: string) {
+  return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+}
+
 export function MessageList({
   messages,
-  usernamesById,
+  membersById,
   currentUserId,
   isFounder,
   roomId,
 }: {
   messages: Message[]
-  usernamesById: Map<string, string>
+  membersById: Map<string, MemberInfo>
   currentUserId: string | undefined
   isFounder: boolean
   roomId: string | undefined
@@ -119,39 +134,51 @@ export function MessageList({
   const deleteMessage = useDeleteMessage(roomId)
 
   if (messages.length === 0) {
-    return <p>Nessun messaggio ancora — scrivi il primo.</p>
+    return <p className="muted center">Nessun messaggio ancora — scrivi il primo.</p>
   }
 
   return (
-    <ul>
-      {messages.map((message) => (
-        <li key={message.id}>
-          <strong>
-            {message.sender_id === currentUserId
-              ? 'Tu'
-              : (usernamesById.get(message.sender_id) ?? '(sconosciuto)')}
-          </strong>
-          {message.body && <MessageBody body={message.body} currentUserId={currentUserId} />}
-          {message.image_paths.map((imagePath) => (
-            <MessageImage key={imagePath} imagePath={imagePath} />
-          ))}
-          {(message.sender_id === currentUserId || isFounder) && (
-            <button
-              type="button"
-              onClick={() =>
-                deleteMessage.mutate({
-                  id: message.id,
-                  imagePaths: message.image_paths,
-                })
-              }
-              disabled={deleteMessage.isPending}
-              style={{ marginLeft: '0.5em' }}
-            >
-              Elimina
-            </button>
-          )}
-        </li>
-      ))}
+    <ul className="message-list">
+      {messages.map((message) => {
+        const isMine = message.sender_id === currentUserId
+        const sender = membersById.get(message.sender_id)
+        const senderName = sender?.username ?? '(sconosciuto)'
+
+        return (
+          <li key={message.id} className={isMine ? 'msg mine' : 'msg'}>
+            {!isMine && <Avatar url={sender?.avatarUrl} name={sender?.username} size="sm" />}
+            <div className="bubble">
+              {!isMine && <span className="who">{senderName}</span>}
+              {message.image_paths.length > 0 && (
+                <div className={message.image_paths.length === 1 ? 'bubble-photos single' : 'bubble-photos'}>
+                  {message.image_paths.map((imagePath) => (
+                    <MessageImage key={imagePath} imagePath={imagePath} />
+                  ))}
+                </div>
+              )}
+              {message.body && <MessageBody body={message.body} currentUserId={currentUserId} />}
+              <div className="bubble-foot">
+                {(isMine || isFounder) && (
+                  <button
+                    type="button"
+                    className="btn-link"
+                    onClick={() =>
+                      deleteMessage.mutate({
+                        id: message.id,
+                        imagePaths: message.image_paths,
+                      })
+                    }
+                    disabled={deleteMessage.isPending}
+                  >
+                    Elimina
+                  </button>
+                )}
+                <time dateTime={message.created_at}>{formatTime(message.created_at)}</time>
+              </div>
+            </div>
+          </li>
+        )
+      })}
     </ul>
   )
 }

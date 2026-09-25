@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import type { Session } from '@supabase/supabase-js'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
+import { BackIcon } from '../../components/icons'
 import { getClientForSlot } from '../../lib/supabaseClient'
 import { nextFreeSlot, registerAccount, switchActiveAccount } from './accountsStore'
 import { LoginPage } from './LoginPage'
@@ -32,13 +33,20 @@ export function AddAccountPage() {
   }
 
   return (
-    <section>
-      <h1>Aggiungi un secondo account</h1>
-      <p>
+    <>
+      <header className="page-header">
+        <Link to="/account" className="icon-btn" aria-label="Indietro">
+          <BackIcon />
+        </Link>
+        <div className="title">
+          <h1>Aggiungi account</h1>
+        </div>
+      </header>
+      <p className="muted page-note">
         L'account già connesso su questo dispositivo resta attivo: accedi qui con le credenziali del
         secondo account che vuoi aggiungere.
       </p>
-      <LoginPage client={client} onSignedIn={handleSignedIn} />
-    </section>
+      <LoginPage client={client} onSignedIn={handleSignedIn} showBrand={false} />
+    </>
   )
 }

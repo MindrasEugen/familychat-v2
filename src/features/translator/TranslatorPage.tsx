@@ -29,33 +29,42 @@ export function TranslatorPage() {
   }
 
   return (
-    <section>
-      <h1>Traduttore</h1>
-      <form onSubmit={handleSubmit}>
-        <label>
-          Testo
-          <textarea value={text} onChange={(event) => setText(event.target.value)} required />
-        </label>
-        <label>
-          Lingua di destinazione
-          <select value={targetLang} onChange={(event) => setTargetLang(event.target.value)}>
-            {Object.entries(LANGUAGES).map(([code, name]) => (
-              <option key={code} value={code}>
-                {name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <button type="submit">Traduci</button>
-      </form>
+    <>
+      <header className="page-header">
+        <div className="title">
+          <h1>Traduttore</h1>
+          <small>Traduci un testo in un'altra lingua</small>
+        </div>
+      </header>
 
-      {translationQuery.isPending && submittedText && <p>Traduzione in corso…</p>}
-      {translationQuery.isError && <p role="alert">Traduzione non riuscita. Riprova.</p>}
-      {translationQuery.data && (
-        <p>
-          <strong>Traduzione:</strong> {translationQuery.data.translatedText}
-        </p>
-      )}
-    </section>
+      <section className="page-body">
+        <form onSubmit={handleSubmit} className="card">
+          <label className="field">
+            Testo
+            <textarea value={text} onChange={(event) => setText(event.target.value)} required />
+          </label>
+          <label className="field">
+            Lingua di destinazione
+            <select value={targetLang} onChange={(event) => setTargetLang(event.target.value)}>
+              {Object.entries(LANGUAGES).map(([code, name]) => (
+                <option key={code} value={code}>
+                  {name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button type="submit">Traduci</button>
+        </form>
+
+        {translationQuery.isPending && submittedText && <p className="muted">Traduzione in corso…</p>}
+        {translationQuery.isError && <p role="alert">Traduzione non riuscita. Riprova.</p>}
+        {translationQuery.data && (
+          <div className="card">
+            <span className="section-label">Traduzione</span>
+            <p className="result-text">{translationQuery.data.translatedText}</p>
+          </div>
+        )}
+      </section>
+    </>
   )
 }

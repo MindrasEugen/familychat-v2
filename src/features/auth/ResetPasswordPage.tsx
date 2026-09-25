@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { supabase } from '../../lib/supabaseClient'
+import { Brand } from './LoginPage'
 import { useSessionStore } from './sessionStore'
 
 export function ResetPasswordPage() {
@@ -33,11 +34,15 @@ export function ResetPasswordPage() {
   }
 
   return (
-    <section>
-      <h1>Imposta nuova password</h1>
+    <section className="auth-page">
+      <Brand />
+      <div className="intro">
+        <h1>Imposta nuova password</h1>
+        <p className="muted">Scegline una di almeno 6 caratteri.</p>
+      </div>
 
-      <form onSubmit={handleSubmit}>
-        <label>
+      <form onSubmit={handleSubmit} className="stack">
+        <label className="field">
           Nuova password
           <input
             type="password"
@@ -48,7 +53,7 @@ export function ResetPasswordPage() {
             autoComplete="new-password"
           />
         </label>
-        <label>
+        <label className="field">
           Conferma password
           <input
             type="password"

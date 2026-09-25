@@ -1,7 +1,8 @@
 import { QueryClientProvider } from '@tanstack/react-query'
 import { useEffect } from 'react'
-import { Link, Navigate, Route, Routes } from 'react-router-dom'
-import { AccountSwitcher } from './features/auth/AccountSwitcher'
+import { Navigate, NavLink, Route, Routes, useMatch } from 'react-router-dom'
+import { ChatIcon, TranslateIcon, UserIcon } from './components/icons'
+import { AccountPage } from './features/auth/AccountPage'
 import { AddAccountPage } from './features/auth/AddAccountPage'
 import { CompleteProfilePage } from './features/auth/CompleteProfilePage'
 import { LoginPage } from './features/auth/LoginPage'
@@ -17,6 +18,7 @@ import { initAccounts, registerAccount, updateActiveAccountProfile, useAccountsS
 import { registerServiceWorker } from './lib/registerServiceWorker'
 import { useAuthStatus } from './features/auth/useAuthStatus'
 import { RoomChatPage } from './features/chat/RoomChatPage'
+import { RoomInfoPage } from './features/rooms/RoomInfoPage'
 import { RoomsListPage } from './features/rooms/RoomsListPage'
 import { TranslatorPage } from './features/translator/TranslatorPage'
 import { queryClient } from './lib/queryClient'
@@ -32,16 +34,39 @@ function useSyncActiveAccountProfile() {
   }, [profile])
 }
 
+// Barra in basso, solo per chi ha fatto l'accesso. Nascosta dentro una
+// chat: lì il fondo dello schermo è della barra di scrittura.
+function TabBar() {
+  const { status } = useAuthStatus()
+  const inChat = useMatch('/rooms/:roomId/*')
+
+  if (status !== 'authenticated' || inChat) return null
+
+  return (
+    <nav className="tabbar" aria-label="Navigazione principale">
+      <div className="tabbar-inner">
+        <NavLink to="/rooms">
+          <ChatIcon />
+          Camere
+        </NavLink>
+        <NavLink to="/translator">
+          <TranslateIcon />
+          Traduttore
+        </NavLink>
+        <NavLink to="/account">
+          <UserIcon />
+          Account
+        </NavLink>
+      </div>
+    </nav>
+  )
+}
+
 function AppLayout() {
   useSyncActiveAccountProfile()
 
   return (
     <>
-      <nav>
-        <Link to="/rooms">Camere</Link>
-        <Link to="/translator">Traduttore</Link>
-        <AccountSwitcher />
-      </nav>
       <Routes>
         <Route path="/" element={<Navigate to="/rooms" replace />} />
         <Route
@@ -97,6 +122,14 @@ function AppLayout() {
           }
         />
         <Route
+          path="/rooms/:roomId/info"
+          element={
+            <RequireAuth>
+              <RoomInfoPage />
+            </RequireAuth>
+          }
+        />
+        <Route
           path="/translator"
           element={
             <RequireAuth>
@@ -104,7 +137,16 @@ function AppLayout() {
             </RequireAuth>
           }
         />
+        <Route
+          path="/account"
+          element={
+            <RequireAuth>
+              <AccountPage />
+            </RequireAuth>
+          }
+        />
       </Routes>
+      <TabBar />
     </>
   )
 }

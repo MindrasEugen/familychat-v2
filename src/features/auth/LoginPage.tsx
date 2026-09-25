@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react'
 import type { Session, SupabaseClient } from '@supabase/supabase-js'
 import { supabase } from '../../lib/supabaseClient'
 import type { Database } from '../../lib/database.types'
+import { ChatIcon } from '../../components/icons'
 
 type Mode = 'signin' | 'signup' | 'forgot-password'
 
@@ -17,9 +18,23 @@ interface LoginPageProps {
   // questo login come (slot attivo per /login, un nuovo slot per
   // /add-account) — LoginPage non ha e non deve avere quel contesto.
   onSignedIn?: (session: Session) => void
+  // Falso quando la pagina è dentro AddAccountPage, che ha già il suo
+  // header: niente logo ripetuto.
+  showBrand?: boolean
 }
 
-export function LoginPage({ client = supabase, onSignedIn }: LoginPageProps) {
+export function Brand() {
+  return (
+    <div className="brand">
+      <span className="brand-mark">
+        <ChatIcon />
+      </span>
+      Chat Famiglia
+    </div>
+  )
+}
+
+export function LoginPage({ client = supabase, onSignedIn, showBrand = true }: LoginPageProps) {
   const [mode, setMode] = useState<Mode>('signin')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -95,13 +110,23 @@ export function LoginPage({ client = supabase, onSignedIn }: LoginPageProps) {
     setInfoMessage("Se l'indirizzo esiste, riceverai un'email con le istruzioni per reimpostare la password.")
   }
 
+  function switchMode(next: Mode) {
+    setMode(next)
+    setErrorMessage(null)
+    setInfoMessage(null)
+  }
+
   if (mode === 'forgot-password') {
     return (
-      <section>
-        <h1>Password dimenticata</h1>
+      <section className="auth-page">
+        {showBrand && <Brand />}
+        <div className="intro">
+          <h1>Password dimenticata</h1>
+          <p className="muted">Ti mandiamo un link per sceglierne una nuova.</p>
+        </div>
 
-        <form onSubmit={handleForgotPassword}>
-          <label>
+        <form onSubmit={handleForgotPassword} className="stack">
+          <label className="field">
             Email
             <input
               type="email"
@@ -120,26 +145,29 @@ export function LoginPage({ client = supabase, onSignedIn }: LoginPageProps) {
           </button>
         </form>
 
-        <button
-          type="button"
-          onClick={() => {
-            setMode('signin')
-            setErrorMessage(null)
-            setInfoMessage(null)
-          }}
-        >
-          Torna al login
-        </button>
+        <div className="row spread">
+          <button type="button" className="btn-link" onClick={() => switchMode('signin')}>
+            Torna al login
+          </button>
+        </div>
       </section>
     )
   }
 
   return (
-    <section>
-      <h1>{mode === 'signin' ? 'Accedi' : 'Registrati'}</h1>
+    <section className="auth-page">
+      {showBrand && <Brand />}
+      <div className="intro">
+        <h1>{mode === 'signin' ? 'Accedi' : 'Registrati'}</h1>
+        <p className="muted">
+          {mode === 'signin'
+            ? 'Accedi per ritrovare le tue camere di famiglia.'
+            : 'Crea il tuo account per entrare nelle camere di famiglia.'}
+        </p>
+      </div>
 
-      <form onSubmit={mode === 'signin' ? handleSignIn : handleSignUp}>
-        <label>
+      <form onSubmit={mode === 'signin' ? handleSignIn : handleSignUp} className="stack">
+        <label className="field">
           Email
           <input
             type="email"
@@ -149,7 +177,7 @@ export function LoginPage({ client = supabase, onSignedIn }: LoginPageProps) {
             autoComplete="email"
           />
         </label>
-        <label>
+        <label className="field">
           Password
           <input
             type="password"
@@ -169,29 +197,20 @@ export function LoginPage({ client = supabase, onSignedIn }: LoginPageProps) {
         </button>
       </form>
 
-      <button
-        type="button"
-        onClick={() => {
-          setMode(mode === 'signin' ? 'signup' : 'signin')
-          setErrorMessage(null)
-          setInfoMessage(null)
-        }}
-      >
-        {mode === 'signin' ? 'Non hai un account? Registrati' : 'Hai già un account? Accedi'}
-      </button>
-
-      {mode === 'signin' && (
+      <div className="row spread">
+        {mode === 'signin' && (
+          <button type="button" className="btn-link" onClick={() => switchMode('forgot-password')}>
+            Password dimenticata?
+          </button>
+        )}
         <button
           type="button"
-          onClick={() => {
-            setMode('forgot-password')
-            setErrorMessage(null)
-            setInfoMessage(null)
-          }}
+          className="btn-link"
+          onClick={() => switchMode(mode === 'signin' ? 'signup' : 'signin')}
         >
-          Password dimenticata?
+          {mode === 'signin' ? 'Non hai un account? Registrati' : 'Hai già un account? Accedi'}
         </button>
-      )}
+      </div>
     </section>
   )
 }
