@@ -11,9 +11,6 @@ in `NOTE.md` — consultarlo per il "perché" dietro una scelta già presa.
 
 ## Da fare
 
-### Autenticazione
-- [ ] **Azione richiesta all'utente**: aggiungere alle Redirect URLs del progetto Supabase (`qamvkevkddfwyxhbftoy`, Dashboard → Authentication → URL Configuration) sia `http://localhost:5173/reset-password` sia il dominio di produzione `https://familychat-v2.onrender.com/**` — senza questo, il link di recupero password non riporta all'app (vedi `NOTE.md`, 2026-09-07). Nessuno strumento disponibile da qui può impostarlo al posto dell'utente; non ancora confermato fatto.
-
 ### Chat
 - [ ] Testare l'invio foto con un vero file HEIC (nessun campione disponibile finora — verificato solo il percorso PNG/JPEG via `createImageBitmap`, vedi `NOTE.md`, 2026-09-07).
 
