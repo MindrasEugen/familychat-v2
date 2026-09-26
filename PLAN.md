@@ -40,7 +40,6 @@ in `NOTE.md` — consultarlo per il "perché" dietro una scelta già presa.
 - [ ] Verificare con due persone: pallino con il numero sulla camera e sulla voce "Camere" della barra in basso, aggiornamento in tempo reale senza ricaricare, azzeramento all'apertura della camera, "letto" condiviso tra PC e telefono dello stesso account.
 
 ### Dismissione v1 (decisa il 2026-09-26)
-- [ ] **Azione dell'utente**: sospendere su Render il sito `chat-famiglia` (Dashboard → chat-famiglia → Settings → Suspend). Gli strumenti disponibili da qui non permettono di sospendere un servizio. Sospendere, non cancellare, finché la v2 non ha girato qualche settimana da sola.
 - [ ] Tra qualche settimana: decidere se cancellare i dati della v1 (`public.messages`, `public.push_subscriptions`, `public.todos`, bucket `chat-photos`), con backup prima se serve. NON toccare `translate-message`, `send-push` né le chiavi VAPID: sono della v2.
 - [ ] **Azione dell'utente** (consigliata): attivare la protezione contro le password compromesse (Dashboard Supabase → Authentication → Password security).
 
