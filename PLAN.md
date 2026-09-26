@@ -42,10 +42,15 @@ in `NOTE.md` — consultarlo per il "perché" dietro una scelta già presa.
 ### Non letti
 - [ ] Verificare con due persone: pallino con il numero sulla camera e sulla voce "Camere" della barra in basso, aggiornamento in tempo reale senza ricaricare, azzeramento all'apertura della camera, "letto" condiviso tra PC e telefono dello stesso account.
 
-### Criteri di accettazione prima di sostituire la v1 in produzione
-- [ ] Lezione 8 verificata (mittente mai notificato del proprio messaggio, a livello server).
-- [ ] Lezione 9 verificata (nessuna notifica residua a chat già aperta, incluso il primo caricamento a freddo).
-- [ ] Lezione 10 verificata (nessun messaggio perso/fuori ordine con più utenti concorrenti e una sottoscrizione realtime attiva).
+### Dismissione v1 (decisa il 2026-09-26)
+- [ ] **Azione dell'utente**: sospendere su Render il sito `chat-famiglia` (Dashboard → chat-famiglia → Settings → Suspend). Gli strumenti disponibili da qui non permettono di sospendere un servizio. Sospendere, non cancellare, finché la v2 non ha girato qualche settimana da sola.
+- [ ] Tra qualche settimana: decidere se cancellare i dati della v1 (`public.messages`, `public.push_subscriptions`, `public.todos`, bucket `chat-photos`), con backup prima se serve. NON toccare `translate-message`, `send-push` né le chiavi VAPID: sono della v2.
+- [ ] **Azione dell'utente** (consigliata): attivare la protezione contro le password compromesse (Dashboard Supabase → Authentication → Password security).
+
+### Verifiche sulla v2 in uso (erano i criteri per sostituire la v1)
+- [ ] Lezione 8: mittente mai notificato del proprio messaggio, a livello server.
+- [ ] Lezione 9: nessuna notifica residua a chat già aperta, incluso il primo caricamento a freddo.
+- [ ] Lezione 10: nessun messaggio perso/fuori ordine con più utenti concorrenti e una sottoscrizione realtime attiva.
 
 ## Note di processo
 - Le decisioni architetturali (modello camere, traduzione, memoria traduzioni, librerie, backend/hosting) sono già prese in `PROMPT_REACT_REWRITE.md` — non richiedono un altro giro di analisi.
