@@ -113,10 +113,15 @@ export function useLoadOlderMessages(roomId: string | undefined) {
 // supabase-js vengono congelati insieme al resto della tab, non solo il
 // socket. Al ritorno in foreground o in rete verifichiamo lo STATO reale
 // del canale e lo ricreiamo solo se non è più "joined" (mai ad ogni evento,
-// altrimenti un canale sano verrebbe ricreato inutilmente). Una volta
-// ricreato, un unico invalidate (non per-evento, quindi non in contrasto
-// con la nota sopra) recupera i messaggi arrivati durante la finestra morta,
-// che una sottoscrizione realtime non può riconsegnare retroattivamente.
+// altrimenti un canale sano verrebbe ricreato inutilmente).
+//
+// Ogni volta che il canale diventa SUBSCRIBED (primo collegamento, rejoin
+// automatico di supabase-js, ricreazione qui sotto) un unico invalidate
+// recupera i messaggi inseriti mentre non eravamo iscritti, che il realtime
+// non riconsegna retroattivamente. Serve anche all'apertura della camera: il
+// fetch iniziale parte prima che il canale sia collegato, e un messaggio
+// arrivato in mezzo andava perso fino al ricaricamento (verificato da
+// tests/e2e/lesson10.spec.ts). Il fetch fa merge per id, quindi è innocuo.
 export function useRoomMessagesRealtime(roomId: string | undefined) {
   const queryClient = useQueryClient()
 
@@ -145,7 +150,9 @@ export function useRoomMessagesRealtime(roomId: string | undefined) {
             )
           },
         )
-        .subscribe()
+        .subscribe((status) => {
+          if (status === 'SUBSCRIBED') queryClient.invalidateQueries({ queryKey: messagesQueryKey(roomId) })
+        })
     }
 
     let channel = createChannel()
@@ -154,7 +161,6 @@ export function useRoomMessagesRealtime(roomId: string | undefined) {
       if (channel.state === 'joined' || channel.state === 'joining') return
       supabase.removeChannel(channel)
       channel = createChannel()
-      queryClient.invalidateQueries({ queryKey: messagesQueryKey(roomId) })
     }
 
     function onVisibilityChange() {

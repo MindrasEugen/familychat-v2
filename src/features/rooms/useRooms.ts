@@ -31,7 +31,8 @@ export function useRooms(userId: string | undefined) {
 // eliminato in una qualunque delle proprie camere (il realtime rispetta le
 // RLS: arrivano solo gli eventi delle camere di cui si è membri) ricarica
 // anteprime e contatori. Stesso recupero del canale dopo background/rete di
-// useRoomMessagesRealtime (lezione 2).
+// useRoomMessagesRealtime (lezione 2), compreso il ricaricamento a ogni
+// SUBSCRIBED per gli eventi persi mentre il canale non era collegato.
 export function useRoomsRealtime(userId: string | undefined) {
   const queryClient = useQueryClient()
 
@@ -45,7 +46,9 @@ export function useRoomsRealtime(userId: string | undefined) {
         .channel(`rooms-overview-${userId}`)
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'AAA3_chat_messages' }, refresh)
         .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'AAA3_chat_messages' }, refresh)
-        .subscribe()
+        .subscribe((status) => {
+          if (status === 'SUBSCRIBED') refresh()
+        })
     }
 
     let channel = createChannel()
@@ -54,7 +57,6 @@ export function useRoomsRealtime(userId: string | undefined) {
       if (channel.state === 'joined' || channel.state === 'joining') return
       supabase.removeChannel(channel)
       channel = createChannel()
-      refresh()
     }
 
     function onVisibilityChange() {

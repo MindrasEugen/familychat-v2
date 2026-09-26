@@ -49,7 +49,6 @@ in `NOTE.md` — consultarlo per il "perché" dietro una scelta già presa.
 ### Verifiche sulla v2 in uso (erano i criteri per sostituire la v1)
 - [ ] Lezione 8: mittente mai notificato del proprio messaggio, a livello server.
 - [ ] Lezione 9: nessuna notifica residua a chat già aperta, incluso il primo caricamento a freddo.
-- [ ] Lezione 10: nessun messaggio perso/fuori ordine con più utenti concorrenti e una sottoscrizione realtime attiva.
 
 ## Note di processo
 - Le decisioni architetturali (modello camere, traduzione, memoria traduzioni, librerie, backend/hosting) sono già prese in `PROMPT_REACT_REWRITE.md` — non richiedono un altro giro di analisi.
