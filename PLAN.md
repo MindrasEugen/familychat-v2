@@ -45,7 +45,6 @@ in `NOTE.md` — consultarlo per il "perché" dietro una scelta già presa.
 - [ ] Tra qualche settimana: decidere se cancellare i dati della v1 (`public.messages`, `public.push_subscriptions`, `public.todos`, bucket `chat-photos`), con backup prima se serve. NON toccare `translate-message`, `send-push` né le chiavi VAPID: sono della v2.
 
 ### Verifiche sulla v2 in uso (erano i criteri per sostituire la v1)
-- [ ] Lezione 8: corretta in `send-push` il 2026-09-26 (endpoint del mittente esclusi anche se appartengono a un altro account dello stesso dispositivo), **da distribuire** (`supabase functions deploy send-push --no-verify-jwt --project-ref qamvkevkddfwyxhbftoy`: il deploy in produzione da qui è stato negato). Dopo il deploy: rifare la prova con le sottoscrizioni finte degli account di prova (vedi `NOTE.md`, atteso `{"sent":1}`), poi rimuoverle.
 - [ ] Lezione 9: nessuna notifica residua a chat già aperta, incluso il primo caricamento a freddo.
 
 ## Note di processo
