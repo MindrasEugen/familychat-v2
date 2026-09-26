@@ -11,6 +11,9 @@ in `NOTE.md` — consultarlo per il "perché" dietro una scelta già presa.
 
 ## Da fare
 
+### Autenticazione
+- [ ] Idea per il futuro, non richiesta ora: accesso con passkey (impronta/volto/PIN). Il pannello Supabase (Authentication → Passkeys) è lasciato spento di proposito: senza codice nell'app (registrazione e accesso con passkey) attivarlo non cambia nulla. Se si fa: nome visualizzato "Chat Famiglia" (nel pannello compare ancora "todo-list-app", avanzo di un vecchio progetto), Relying Party ID legato al dominio `familychat-v2.onrender.com` (cambiare dominio invalida le passkey esistenti; altre app sullo stesso progetto Supabase vanno aggiunte alle origini), da studiare insieme al multi-account sullo stesso dispositivo.
+
 ### Chat
 - [ ] Testare l'invio foto con un vero file HEIC (nessun campione disponibile finora — verificato solo il percorso PNG/JPEG via `createImageBitmap`, vedi `NOTE.md`, 2026-09-07).
 
