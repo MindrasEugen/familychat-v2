@@ -565,8 +565,15 @@ textarea {
     radial-gradient(circle at 20% 10%, var(--sage-bg), transparent 45%),
     var(--bg);
 }
-.chat-scroll > .btn-link,
-.chat-scroll > .center {
+/* Contenitore osservato da RoomChatPage (ResizeObserver) per restare in
+   fondo quando foto e traduzioni allungano la lista. */
+.chat-scroll-content {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.chat-scroll-content > .btn-link,
+.chat-scroll-content > .center {
   align-self: center;
 }
 .center {

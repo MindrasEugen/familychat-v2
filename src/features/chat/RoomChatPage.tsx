@@ -50,6 +50,41 @@ export function RoomChatPage() {
     if (scroller && lastMessageId) scroller.scrollTop = scroller.scrollHeight
   }, [lastMessageId, roomReady])
 
+  // Foto che finiscono di caricare e traduzioni che sostituiscono il testo
+  // allungano la lista DOPO lo scroll qui sopra: senza questo gli ultimi
+  // messaggi restavano nascosti sotto la barra di scrittura (visto il
+  // 2026-09-26 con una foto in chat). Se chi legge era in fondo, ce lo
+  // teniamo; se stava leggendo più in alto, non lo spostiamo.
+  const contentRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const scroller = scrollRef.current
+    const content = contentRef.current
+    if (!scroller || !content) return
+
+    let atBottom = true
+    let lastHeight = scroller.scrollHeight
+    const onScroll = () => {
+      // Uno scroll arrivato insieme a un cambio di altezza è il browser che
+      // riadatta la posizione (es. una foto che si restringe e poi cresce),
+      // non chi legge che sale: non deve sganciare dal fondo.
+      if (scroller.scrollHeight !== lastHeight) {
+        lastHeight = scroller.scrollHeight
+        return
+      }
+      atBottom = scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight < 80
+    }
+    const observer = new ResizeObserver(() => {
+      lastHeight = scroller.scrollHeight
+      if (atBottom) scroller.scrollTop = scroller.scrollHeight
+    })
+    scroller.addEventListener('scroll', onScroll, { passive: true })
+    observer.observe(content)
+    return () => {
+      scroller.removeEventListener('scroll', onScroll)
+      observer.disconnect()
+    }
+  }, [roomReady])
+
   if (roomQuery.isPending) return <p className="muted page-note">Caricamento…</p>
   if (roomQuery.isError || !roomQuery.data) {
     return (
@@ -82,35 +117,37 @@ export function RoomChatPage() {
       </div>
 
       <div className="chat-scroll" ref={scrollRef}>
-        {messagesQuery.isPending && <p className="muted center">Caricamento…</p>}
-        {messagesQuery.isError && <p role="alert">Errore nel caricamento dei messaggi.</p>}
-        {messagesQuery.data && messagesQuery.data.length > 0 && !noMoreOlderMessages && (
-          <button
-            type="button"
-            className="btn-link"
-            onClick={() =>
-              loadOlderMessages.mutate(undefined, {
-                onSuccess: (fetchedCount) => {
-                  if (fetchedCount < MESSAGES_PAGE_SIZE) setNoMoreOlderMessages(true)
-                },
-              })
-            }
-            disabled={loadOlderMessages.isPending}
-          >
-            Carica messaggi precedenti
-          </button>
-        )}
-        {loadOlderMessages.isError && <p role="alert">{loadOlderMessages.error.message}</p>}
-        {noMoreOlderMessages && <p className="muted center">Inizio della cronologia.</p>}
-        {messagesQuery.data && (
-          <MessageList
-            messages={messagesQuery.data}
-            membersById={membersById}
-            currentUserId={userId}
-            isFounder={isFounder}
-            roomId={roomId}
-          />
-        )}
+        <div className="chat-scroll-content" ref={contentRef}>
+          {messagesQuery.isPending && <p className="muted center">Caricamento…</p>}
+          {messagesQuery.isError && <p role="alert">Errore nel caricamento dei messaggi.</p>}
+          {messagesQuery.data && messagesQuery.data.length > 0 && !noMoreOlderMessages && (
+            <button
+              type="button"
+              className="btn-link"
+              onClick={() =>
+                loadOlderMessages.mutate(undefined, {
+                  onSuccess: (fetchedCount) => {
+                    if (fetchedCount < MESSAGES_PAGE_SIZE) setNoMoreOlderMessages(true)
+                  },
+                })
+              }
+              disabled={loadOlderMessages.isPending}
+            >
+              Carica messaggi precedenti
+            </button>
+          )}
+          {loadOlderMessages.isError && <p role="alert">{loadOlderMessages.error.message}</p>}
+          {noMoreOlderMessages && <p className="muted center">Inizio della cronologia.</p>}
+          {messagesQuery.data && (
+            <MessageList
+              messages={messagesQuery.data}
+              membersById={membersById}
+              currentUserId={userId}
+              isFounder={isFounder}
+              roomId={roomId}
+            />
+          )}
+        </div>
       </div>
 
       <MessageComposer roomId={roomId} userId={userId} />

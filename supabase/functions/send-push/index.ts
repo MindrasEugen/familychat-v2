@@ -11,6 +11,8 @@
 // in v2 ogni persona ha un proprio account, quindi escludere il mittente
 // dalla lista dei MEMBRI della camera esclude già tutti i suoi dispositivi
 // in un colpo solo (lezione 8: esclusione lato server, non solo client).
+// Con il multi-account però un dispositivo può appartenere anche a un altro
+// membro: per questo si escludono anche gli endpoint del mittente.
 
 import webpush from "npm:web-push@3.6.7";
 import { createClient } from "npm:@supabase/supabase-js@2";
@@ -86,12 +88,12 @@ Deno.serve(async (req: Request) => {
     return new Response(JSON.stringify({ sent: 0 }), { headers: { "Content-Type": "application/json" } });
   }
 
-  const { data: subs, error: subsError } = await supabase
-    .from("AAA3_push_subscriptions")
-    .select("endpoint, p256dh, auth")
-    .in("user_id", recipientIds);
+  const [{ data: subs, error: subsError }, { data: senderSubs, error: senderSubsError }] = await Promise.all([
+    supabase.from("AAA3_push_subscriptions").select("endpoint, p256dh, auth").in("user_id", recipientIds),
+    supabase.from("AAA3_push_subscriptions").select("endpoint").eq("user_id", message.sender_id),
+  ]);
 
-  if (subsError || !subs) {
+  if (subsError || !subs || senderSubsError || !senderSubs) {
     return new Response(JSON.stringify({ error: "Failed to load subscriptions" }), {
       status: 500,
       headers: { "Content-Type": "application/json" },
@@ -99,8 +101,14 @@ Deno.serve(async (req: Request) => {
   }
 
   // Stesso dispositivo iscritto con due account (multi-account) entrambi
-  // membri della camera: una sola notifica per endpoint, non due.
-  const uniqueSubs = [...new Map(subs.map((sub) => [sub.endpoint, sub])).values()];
+  // membri della camera: una sola notifica per endpoint, non due. E se uno
+  // dei due è il mittente, quel dispositivo non riceve nulla: escludere il
+  // mittente come persona non basta, il suo telefono arriverebbe comunque
+  // tramite l'altro account (lezione 8, verificato il 2026-09-26).
+  const senderEndpoints = new Set(senderSubs.map((sub) => sub.endpoint));
+  const uniqueSubs = [
+    ...new Map(subs.filter((sub) => !senderEndpoints.has(sub.endpoint)).map((sub) => [sub.endpoint, sub])).values(),
+  ];
 
   const title = sender?.username || "Nuovo messaggio";
   const bodyText = message.body ? message.body.slice(0, 120) : "📷 Foto";

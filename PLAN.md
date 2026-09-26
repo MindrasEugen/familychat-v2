@@ -26,7 +26,6 @@ in `NOTE.md` — consultarlo per il "perché" dietro una scelta già presa.
 - [ ] Idea in attesa, non richiesta: passare la lingua di partenza invece dell'auto-rilevamento (messaggi corti rilevati male: `la`, `de`, `it` su testi probabilmente rumeni). L'utente preferisce osservare prima.
 
 ### Grafica
-- [ ] **Verificare in browser** le schermate dopo l'accesso (lista camere, chat, Info camera, traduttore, Account, vista foto a schermo intero, tutorial via "Rivedi la guida") in formato telefono e desktop, in entrambi i temi — il 2026-09-25 è stata vista solo la pagina di accesso (l'accesso con password va fatto dall'utente).
 - [ ] Provare su un telefono vero: barra in basso e barra di scrittura con le safe area (notch/gesture bar), app installata (PWA) con il colore di sistema del tema.
 
 ### Foto in chat
@@ -34,7 +33,6 @@ in `NOTE.md` — consultarlo per il "perché" dietro una scelta già presa.
 
 ### Tutorial di benvenuto
 - [ ] Far rileggere i testi in rumeno e francese a chi parla la lingua (`src/features/tutorial/tutorialTexts.ts`) — scritti da Claude, non ancora rivisti da un madrelingua.
-- [ ] Verificare il primo avvio reale con un profilo appena creato: il tutorial compare una volta, "Salta"/"Inizia"/Esc lo segnano come visto (`tutorial_seen_at` valorizzato) e non ricompare dopo un reload.
 
 ### Notifiche push
 - [ ] Ricezione reale confermata dall'utente il 2026-09-25 (vedi `NOTE.md`). Restano da provare: nessuna notifica con "Notifiche di questa camera" spento; due account sullo stesso telefono nella stessa camera → una sola notifica; soppressione quando la camera è già aperta; comportamento del click sulla notifica.
@@ -47,7 +45,7 @@ in `NOTE.md` — consultarlo per il "perché" dietro una scelta già presa.
 - [ ] Tra qualche settimana: decidere se cancellare i dati della v1 (`public.messages`, `public.push_subscriptions`, `public.todos`, bucket `chat-photos`), con backup prima se serve. NON toccare `translate-message`, `send-push` né le chiavi VAPID: sono della v2.
 
 ### Verifiche sulla v2 in uso (erano i criteri per sostituire la v1)
-- [ ] Lezione 8: mittente mai notificato del proprio messaggio, a livello server.
+- [ ] Lezione 8: corretta in `send-push` il 2026-09-26 (endpoint del mittente esclusi anche se appartengono a un altro account dello stesso dispositivo), **da distribuire** (`supabase functions deploy send-push --no-verify-jwt --project-ref qamvkevkddfwyxhbftoy`: il deploy in produzione da qui è stato negato). Dopo il deploy: rifare la prova con le sottoscrizioni finte degli account di prova (vedi `NOTE.md`, atteso `{"sent":1}`), poi rimuoverle.
 - [ ] Lezione 9: nessuna notifica residua a chat già aperta, incluso il primo caricamento a freddo.
 
 ## Note di processo
