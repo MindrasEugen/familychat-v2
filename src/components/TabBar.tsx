@@ -1,14 +1,16 @@
 import { NavLink, useMatch } from 'react-router-dom'
 import { useAuthStatus } from '../features/auth/useAuthStatus'
 import { useRooms, useRoomsRealtime } from '../features/rooms/useRooms'
+import { closeSandbox, useSandboxMode } from '../features/sandbox/sandboxMode'
 import { useDataApi } from '../lib/dataApi'
-import { ChatIcon, TranslateIcon, UserIcon } from './icons'
+import { ChatIcon, CloseIcon, TranslateIcon, UserIcon } from './icons'
 
 // Barra in basso, solo per chi ha fatto l'accesso. Nascosta dentro una
 // chat: lì il fondo dello schermo è della barra di scrittura.
 export function TabBar() {
   const { status, session } = useAuthStatus()
   const { sandbox } = useDataApi()
+  const inDemo = useSandboxMode((state) => state.mode === 'demo')
   const inChat = useMatch('/rooms/:roomId/*')
   // Qui e non nella lista camere: la barra è montata su tutte le pagine
   // dopo l'accesso, così il pallino dei non letti su "Camere" resta
@@ -38,12 +40,19 @@ export function TabBar() {
           <TranslateIcon />
           Traduttore
         </NavLink>
-        {/* Nel tour e nella demo niente Account: lì ci sono gli account veri. */}
+        {/* Nel tour e nella demo niente Account: lì ci sono gli account veri.
+            Nella demo al suo posto c'è l'uscita. */}
         {!sandbox && (
           <NavLink to="/account">
             <UserIcon />
             Account
           </NavLink>
+        )}
+        {inDemo && (
+          <button type="button" className="tab-exit" onClick={() => closeSandbox()}>
+            <CloseIcon />
+            Esci dalla demo
+          </button>
         )}
       </div>
     </nav>

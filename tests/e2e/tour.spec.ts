@@ -92,3 +92,44 @@ test('"Salta" chiude il tour e lo segna come visto', async ({ page }) => {
   await expect(tour).toBeHidden()
   expect(requests).toEqual([])
 })
+
+test.describe('demo libera', () => {
+  // Tour già visto: si arriva alla pagina di accesso e si sceglie la demo.
+  test.use({
+    storageState: {
+      cookies: [],
+      origins: [{ origin: 'http://localhost:5173', localStorage: [{ name: 'familychat-tour-seen', value: 'e2e' }] }],
+    },
+  })
+
+  test('"Prova la demo" apre camere e messaggi d’esempio, si usa e si chiude senza richieste a Supabase', async ({
+    page,
+  }) => {
+    const requests = recordSupabaseRequests(page)
+    await page.goto('/login')
+    await page.getByRole('button', { name: 'Prova la demo' }).click()
+
+    await expect(page.getByRole('heading', { name: 'Le tue camere' })).toBeVisible()
+    await expect(page.getByRole('dialog', { name: 'Tour di benvenuto' })).toBeHidden()
+    await page.getByRole('link', { name: /Famiglia/ }).click()
+
+    await expect(page.getByText("Vengo anch'io! Porto il dolce.")).toBeVisible()
+    await page.getByLabel('Messaggio').fill('Messaggio di prova nella demo')
+    await page.getByRole('button', { name: 'Invia' }).click()
+    await expect(page.getByText('Messaggio di prova nella demo')).toBeVisible()
+    await page.getByRole('button', { name: 'Elimina' }).click()
+    await expect(page.getByText('Messaggio di prova nella demo')).toBeHidden()
+
+    await page.getByRole('link', { name: 'Indietro' }).click()
+    await page.getByRole('button', { name: 'Esci dalla demo' }).click()
+    await expect(page.getByRole('heading', { name: 'Accedi' })).toBeVisible()
+    await page.waitForTimeout(1_000)
+    expect(requests).toEqual([])
+
+    // Riaprendola si riparte dai dati d'esempio: niente è rimasto.
+    await page.getByRole('button', { name: 'Prova la demo' }).click()
+    await page.getByRole('link', { name: /Famiglia/ }).click()
+    await expect(page.getByText("Perfetto, allora ci vediamo all'una.")).toBeVisible()
+    await expect(page.getByText('Messaggio di prova nella demo')).toBeHidden()
+  })
+})

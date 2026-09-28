@@ -21,7 +21,7 @@ import { RoomChatPage } from './features/chat/RoomChatPage'
 import { RoomInfoPage } from './features/rooms/RoomInfoPage'
 import { RoomsListPage } from './features/rooms/RoomsListPage'
 import { TranslatorPage } from './features/translator/TranslatorPage'
-import { useSandboxMode } from './features/sandbox/sandboxMode'
+import { openSandbox, useSandboxMode } from './features/sandbox/sandboxMode'
 import { useAutoStartTour } from './features/tour/useAutoStartTour'
 import { WelcomeTutorial } from './features/tutorial/WelcomeTutorial'
 import { queryClient } from './lib/queryClient'
@@ -53,6 +53,16 @@ function AppLayout() {
             <GuestOnly>
               <LoginPage
                 initialMode={openSignup ? 'signup' : 'signin'}
+                footer={
+                  <div className="stack sandbox-links">
+                    <button type="button" className="btn-ghost" onClick={() => openSandbox('demo')}>
+                      Prova la demo
+                    </button>
+                    <button type="button" className="btn-link" onClick={() => openSandbox('tour')}>
+                      Come funziona? Guarda il tour
+                    </button>
+                  </div>
+                }
                 onSignedIn={(session) =>
                   registerAccount(useAccountsStore.getState().activeSlot, session.user.id)
                 }

@@ -12,6 +12,7 @@ export function Root() {
   const mode = useSandboxMode((state) => state.mode)
 
   if (mode === 'tour') return <TourApp />
+  // Demo libera: stessa sandbox del tour, già con profilo, senza passi.
   if (mode === 'demo') return <SandboxApp withProfile initialPath="/rooms" />
 
   return (

@@ -400,7 +400,8 @@ textarea {
   width: 100%;
   max-width: 720px;
 }
-.tabbar a {
+.tabbar a,
+.tabbar .tab-exit {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -414,7 +415,13 @@ textarea {
   color: var(--muted);
   text-decoration: none;
 }
-.tabbar a svg {
+.tabbar .tab-exit {
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+.tabbar a svg,
+.tabbar .tab-exit svg {
   width: 22px;
   height: 22px;
 }
@@ -990,6 +997,14 @@ input:-webkit-autofill:focus {
 }
 
 /* ---------- Tour guidato (sandbox) ---------- */
+
+/* "Prova la demo" / "Guarda il tour" sotto il modulo di accesso */
+.sandbox-links {
+  margin-top: 8px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+  gap: 6px;
+}
 
 .tour-layer {
   position: fixed;
