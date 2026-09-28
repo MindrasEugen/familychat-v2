@@ -48,7 +48,17 @@ function useTargetRect(target: string | undefined) {
 // riquadro del testo va sopra o sotto l'elemento, dove c'è più spazio, così
 // su telefono non lo copre mai.
 // target: selettore CSS dell'elemento da evidenziare (nessuno = riquadro al centro).
-export function TourOverlay({ target, label, children }: { target?: string; label: string; children: ReactNode }) {
+export function TourOverlay({
+  target,
+  label,
+  lang,
+  children,
+}: {
+  target?: string
+  label: string
+  lang: string
+  children: ReactNode
+}) {
   const rect = useTargetRect(target)
   const [missingFor, setMissingFor] = useState<string | null>(null)
   useEffect(() => {
@@ -94,7 +104,7 @@ export function TourOverlay({ target, label, children }: { target?: string; labe
       {/* Finché l'elemento del passo non è sullo schermo, niente riquadro:
           al centro rischierebbe di coprirlo proprio quando compare. */}
       {(!target || hole || missingFor === target) && (
-        <div className="tour-box" role="dialog" aria-label={label} style={boxStyle}>
+        <div className="tour-box" role="dialog" aria-label={label} lang={lang} style={boxStyle}>
           {children}
         </div>
       )}

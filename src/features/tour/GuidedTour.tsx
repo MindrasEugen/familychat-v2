@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useStore } from 'zustand'
 import type { Sandbox } from '../sandbox/sandboxContext'
 import { closeSandbox, useSandboxMode } from '../sandbox/sandboxMode'
+import { getTourTexts, getTutorialLang } from '../tutorial/tutorialTexts'
 import { markTourSeen } from './tourSeen'
 import { isLastStep, isStepDone, TOUR_STEPS } from './tourSteps'
 import { TourOverlay } from './TourOverlay'
@@ -12,6 +13,8 @@ import { TourOverlay } from './TourOverlay'
 // l'azione risulta fatta. "Salta" e la fine segnano il tour come visto.
 export function GuidedTour({ sandbox }: { sandbox: Sandbox }) {
   const [index, setIndex] = useState(0)
+  const lang = getTutorialLang()
+  const texts = getTourTexts(lang)
   const review = useSandboxMode((mode) => mode.review)
   const navigate = useNavigate()
   const state = useStore(sandbox.store)
@@ -45,33 +48,31 @@ export function GuidedTour({ sandbox }: { sandbox: Sandbox }) {
   }
 
   return (
-    <TourOverlay target={step.target} label="Tour di benvenuto">
+    <TourOverlay target={step.target} label={texts.dialogLabel} lang={lang}>
       <div className="tour-top">
-        <small className="muted">
-          {index + 1} di {TOUR_STEPS.length}
-        </small>
+        <small className="muted">{texts.progress(index + 1, TOUR_STEPS.length)}</small>
         {!isLastStep(index) && (
           <button type="button" className="btn-link" onClick={() => finish({ toSignup: false })}>
-            Salta
+            {texts.skip}
           </button>
         )}
       </div>
-      <h2>{review && isLastStep(index) ? 'Tutto chiaro' : step.title}</h2>
-      <p>{review && isLastStep(index) ? 'Ora sai come funziona. Torna all’app per ritrovare le tue camere.' : step.body}</p>
+      <h2>{review && isLastStep(index) ? texts.reviewDoneTitle : texts.steps[step.id].title}</h2>
+      <p>{review && isLastStep(index) ? texts.reviewDoneBody : texts.steps[step.id].body}</p>
       <div className="tour-actions">
         {index > 0 && !isLastStep(index) && (
           <button type="button" className="btn-ghost" onClick={() => setIndex(index - 1)}>
-            Indietro
+            {texts.back}
           </button>
         )}
         {isLastStep(index) ? (
           <button type="button" onClick={() => finish({ toSignup: !review })}>
-            {review ? 'Torna all’app' : 'Crea il tuo account'}
+            {review ? texts.finishReview : texts.finishSignup}
           </button>
         ) : (
           (!waitsForAction || (done && !autoAdvance)) && (
             <button type="button" onClick={() => setIndex(index + 1)}>
-              Avanti
+              {texts.next}
             </button>
           )
         )}

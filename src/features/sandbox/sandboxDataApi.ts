@@ -2,6 +2,7 @@ import type { Session } from '@supabase/supabase-js'
 import { createStore } from 'zustand/vanilla'
 import type { Database } from '../../lib/database.types'
 import type { CorrectTranslationInput, DataApi, RoomOverview, TranslationResult } from '../../lib/supabaseDataApi'
+import { getTourTexts } from '../tutorial/tutorialTexts'
 
 // Sorgente dati del tour e della demo: stessa forma di supabaseDataApi, ma
 // tutto vive in memoria (uno store creato a ogni apertura, buttato alla
@@ -80,7 +81,7 @@ export function createSandboxStore({ withProfile }: { withProfile: boolean }) {
   return createStore<SandboxState>(() => ({
     signedUp: withProfile,
     profile: withProfile
-      ? { id: SANDBOX_USER_ID, username: 'Ospite', avatar_url: null, created_at: now, tutorial_seen_at: now }
+      ? { id: SANDBOX_USER_ID, username: getTourTexts().sandbox.guestName, avatar_url: null, created_at: now, tutorial_seen_at: now }
       : null,
     relatives: {
       [NONNA_ID]: { username: 'Nonna Maria', avatar_url: null },
@@ -170,7 +171,7 @@ export function createSandboxDataApi(store: SandboxStore): DataApi {
     },
 
     async joinRoom() {
-      throw new Error('Nella prova non puoi unirti a una camera vera: crea il tuo account per usare un codice invito.')
+      throw new Error(getTourTexts().sandbox.joinRoomError)
     },
 
     async getRoom(roomId) {

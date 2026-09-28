@@ -23,6 +23,7 @@ import { RoomsListPage } from './features/rooms/RoomsListPage'
 import { TranslatorPage } from './features/translator/TranslatorPage'
 import { openSandbox, useSandboxMode } from './features/sandbox/sandboxMode'
 import { useAutoStartTour } from './features/tour/useAutoStartTour'
+import { getTourTexts } from './features/tutorial/tutorialTexts'
 import { WelcomeTutorial } from './features/tutorial/WelcomeTutorial'
 import { queryClient } from './lib/queryClient'
 
@@ -56,10 +57,10 @@ function AppLayout() {
                 footer={
                   <div className="stack sandbox-links">
                     <button type="button" className="btn-ghost" onClick={() => openSandbox('demo')}>
-                      Prova la demo
+                      {getTourTexts().tryDemo}
                     </button>
                     <button type="button" className="btn-link" onClick={() => openSandbox('tour')}>
-                      Come funziona? Guarda il tour
+                      {getTourTexts().watchTour}
                     </button>
                   </div>
                 }

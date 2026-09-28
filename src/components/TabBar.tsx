@@ -2,6 +2,7 @@ import { NavLink, useMatch } from 'react-router-dom'
 import { useAuthStatus } from '../features/auth/useAuthStatus'
 import { useRooms, useRoomsRealtime } from '../features/rooms/useRooms'
 import { closeSandbox, useSandboxMode } from '../features/sandbox/sandboxMode'
+import { getTourTexts } from '../features/tutorial/tutorialTexts'
 import { useDataApi } from '../lib/dataApi'
 import { ChatIcon, CloseIcon, TranslateIcon, UserIcon } from './icons'
 
@@ -51,7 +52,7 @@ export function TabBar() {
         {inDemo && (
           <button type="button" className="tab-exit" onClick={() => closeSandbox()}>
             <CloseIcon />
-            Esci dalla demo
+            {getTourTexts().exitDemo}
           </button>
         )}
       </div>

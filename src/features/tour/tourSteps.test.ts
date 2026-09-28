@@ -1,9 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createSandboxDataApi, createSandboxStore, SANDBOX_ROOM_ID, SANDBOX_USER_ID } from '../sandbox/sandboxDataApi'
 import { markTourSeen, tourSeenAt } from './tourSeen'
+import type { TourStepId } from '../tutorial/tutorialTexts'
 import { createdRoomId, isLastStep, isStepDone, TOUR_STEPS } from './tourSteps'
 
-function stepById(id: string) {
+function stepById(id: TourStepId) {
   const step = TOUR_STEPS.find((candidate) => candidate.id === id)
   if (!step) throw new Error(`passo ${id} mancante`)
   return step
@@ -23,7 +24,7 @@ describe('passi del tour', () => {
   it('ogni azione richiesta risulta fatta solo dopo averla fatta davvero nella sandbox', async () => {
     const store = createSandboxStore({ withProfile: false })
     const api = createSandboxDataApi(store)
-    const done = (id: string) => isStepDone(stepById(id), store.getState())
+    const done = (id: TourStepId) => isStepDone(stepById(id), store.getState())
 
     expect(done('signup')).toBe(false)
     store.setState({ signedUp: true })
@@ -33,9 +34,9 @@ describe('passi del tour', () => {
     await api.createProfile(SANDBOX_USER_ID, 'Anna', null, null)
     expect(done('profile')).toBe(true)
 
-    expect(done('create-room')).toBe(false)
+    expect(done('createRoom')).toBe(false)
     const room = await api.createRoom('Cugini')
-    expect(done('create-room')).toBe(true)
+    expect(done('createRoom')).toBe(true)
     expect(createdRoomId(store.getState())).toBe(room.id)
     // L'invito si fa nella camera appena creata, non in quella d'esempio.
     expect(stepById('invite').path(store.getState())).toBe(`/rooms/${room.id}/info`)
