@@ -8,6 +8,7 @@ Una chat di famiglia in cui ognuno scrive nella sua lingua e legge nella propria
   <img src="docs/media/tour.gif" width="280" alt="Tour guidato, dalla schermata di benvenuto alla traduzione automatica">
   <img src="docs/media/tour-traduzione.png" width="280" alt="Un messaggio in rumeno mostrato tradotto in italiano">
 </p>
+
 **[Prova l'app](https://familychat-v2.onrender.com)**: nella pagina di accesso tocca «Come funziona? Guarda il tour» per il tour guidato, oppure «Prova la demo» per esplorarla con dati d'esempio. Non serve un account.
 
 ## Funzionalità
