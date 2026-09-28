@@ -58,3 +58,4 @@ revoke execute on function public.increment_translation_usage(text, integer) fro
 revoke execute on function public.mark_translation_provider_exhausted(text) from public, anon, authenticated;
 grant execute on function public.increment_translation_usage(text, integer) to service_role;
 grant execute on function public.mark_translation_provider_exhausted(text) to service_role;
+grant all on table public."AAA3_translation_usage" to service_role;
