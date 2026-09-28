@@ -7,7 +7,7 @@
 // locale: hanno la precedenza su .env.local, sia per Vite sia per i test.
 // Le chiavi non stanno in nessun file: si leggono ogni volta da
 // "supabase status" (sono quelle, pubbliche, dello stack locale).
-import { execSync, spawnSync } from 'node:child_process'
+import { execFileSync, execSync, spawnSync } from 'node:child_process'
 import { createClient } from '@supabase/supabase-js'
 
 const status = Object.fromEntries(
@@ -33,6 +33,41 @@ const devServerUp = await fetch('http://localhost:5173').then(
 )
 if (devServerUp) {
   console.error('Un server è già acceso su localhost:5173 (probabilmente "pnpm dev"): spegnilo e rilancia.')
+  process.exit(1)
+}
+
+// Il trigger delle notifiche e il job di pulizia foto chiamano le funzioni
+// del progetto online: in locale devono essere spenti (supabase/seed.sql).
+// Un database creato prima del seed li ha ancora attivi.
+const localChecks = execFileSync(
+  'docker',
+  [
+    'exec',
+    'supabase_db_familychat-v2',
+    'psql',
+    '-U',
+    'postgres',
+    '-tA',
+    '-c',
+    `select coalesce((select tgenabled::text from pg_trigger
+       where tgrelid = to_regclass('public."AAA3_chat_messages"') and tgname = 'send_push_on_new_chat_message'), 'assente')
+     || '|' || (select count(*) from cron.job where jobname = 'AAA3_cleanup_orphan_photos')`,
+  ],
+  { encoding: 'utf8' },
+).trim()
+const [pushTrigger, cleanupJobs] = localChecks.split('|')
+if (pushTrigger !== 'D') {
+  console.error(
+    `Trigger send_push_on_new_chat_message non spento (tgenabled = ${pushTrigger}): chiamerebbe send-push online.\n` +
+      'Ricrea il database locale (npx supabase stop --no-backup, poi npx supabase start) per applicare supabase/seed.sql.',
+  )
+  process.exit(1)
+}
+if (cleanupJobs !== '0') {
+  console.error(
+    'Job AAA3_cleanup_orphan_photos ancora presente in cron.job: chiamerebbe cleanup-orphan-photos online.\n' +
+      'Ricrea il database locale (npx supabase stop --no-backup, poi npx supabase start) per applicare supabase/seed.sql.',
+  )
   process.exit(1)
 }
 
