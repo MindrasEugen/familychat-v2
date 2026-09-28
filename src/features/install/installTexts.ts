@@ -80,9 +80,6 @@ const TEXTS: Record<TutorialLang, AppTexts> = {
       reload: 'Update',
     },
   },
-  // Bozza da far verificare: nel testo ricevuto il francese si fermava dopo
-  // la prima frase di iosBody; il resto di iosBody e le chiavi seguenti
-  // sono scritti sullo stile delle altre lingue.
   fr: {
     install: {
       title: 'Installe Chat Famiglia',
@@ -91,11 +88,11 @@ const TEXTS: Record<TutorialLang, AppTexts> = {
       dismiss: 'Pas maintenant',
       iosTitle: 'Ajoute-la à l’écran d’accueil',
       iosBody:
-        'Dans Safari, touche «Partager», puis «Sur l’écran d’accueil». Sur iPhone, les notifications n’arrivent que de cette façon (iOS 16.4 ou plus récent).',
-      accountLabel: 'L’application sur ton téléphone',
+        'Dans Safari, touche «Partager», puis «Sur l’écran d’accueil». Sur iPhone, les notifications n’arrivent que comme ça (iOS 16.4 ou version ultérieure).',
+      accountLabel: 'Application sur le téléphone',
       installed: 'L’application est déjà installée sur cet appareil.',
       unavailable:
-        'D’ici, le navigateur ne permet pas l’installation : cherche «Installer l’application» ou «Sur l’écran d’accueil» dans son menu.',
+        'Depuis ici, le navigateur ne permet pas l’installation : cherche «Installer l’application» ou «Ajouter à l’écran d’accueil» dans son menu.',
     },
     update: {
       available: 'Une nouvelle version est disponible.',
