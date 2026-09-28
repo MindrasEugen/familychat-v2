@@ -2,6 +2,15 @@ import { useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { Avatar } from '../../components/Avatar'
 import { useAuthStatus } from '../auth/useAuthStatus'
+import { useDataApi } from '../../lib/dataApi'
+import {
+  dismissInstall,
+  installCardReplacesPushReminder,
+  isInstallDismissed,
+  shouldShowInstallCard,
+} from '../install/installPrompt'
+import { InstallCard } from '../install/InstallControls'
+import { useInstallPrompt } from '../install/useInstallPrompt'
 import { PushBellButton, PushReminder } from '../notifications/PushControls'
 import { useCreateRoom, useJoinRoom, useRooms, type RoomOverview } from './useRooms'
 
@@ -35,6 +44,14 @@ export function RoomsListPage() {
   // Cambiarlo rimonta l'avviso sulle notifiche, che ricompare con il suo
   // timer: la campanella lo usa quando da lì non si può attivare nulla.
   const [reminderKey, setReminderKey] = useState(0)
+
+  // Scheda "Installa l'app": mai nel tour e nella demo (sandbox). Su iPhone
+  // non installato prende il posto dell'avviso delle notifiche.
+  const { sandbox } = useDataApi()
+  const { installState } = useInstallPrompt()
+  const [installDismissed, setInstallDismissed] = useState(isInstallDismissed)
+  const showInstallCard = !sandbox && shouldShowInstallCard(installState, installDismissed)
+  const hidePushReminder = !sandbox && installCardReplacesPushReminder(installState, installDismissed)
 
   const roomsQuery = useRooms(userId)
   const createRoom = useCreateRoom(userId)
@@ -78,7 +95,16 @@ export function RoomsListPage() {
       </header>
 
       <section className="page-body">
-        <PushReminder key={reminderKey} userId={userId} />
+        {showInstallCard && (
+          <InstallCard
+            state={installState}
+            onDismiss={() => {
+              dismissInstall()
+              setInstallDismissed(true)
+            }}
+          />
+        )}
+        {!hidePushReminder && <PushReminder key={reminderKey} userId={userId} />}
         {pushError && <p role="alert">{pushError}</p>}
 
         {roomsQuery.isPending && <p className="muted">Caricamento…</p>}

@@ -996,6 +996,16 @@ input:-webkit-autofill:focus {
   flex: 1;
 }
 
+/* ---------- Installazione dell'app ---------- */
+
+.install-card {
+  border-color: var(--accent);
+  gap: 8px;
+}
+.install-card p {
+  line-height: 1.45;
+}
+
 /* ---------- Tour guidato (sandbox) ---------- */
 
 /* "Prova la demo" / "Guarda il tour" sotto il modulo di accesso */
