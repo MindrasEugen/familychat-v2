@@ -249,3 +249,34 @@ fondo restano in `PROMPT_REACT_REWRITE.md` (non ripetute qui).
 - La catena è ora Azure → Google → Mistral (Azure primario): la voce di `PLAN.md` "Azure mai esercitato" era superata ed è stata tolta.
 - In locale, con le chiavi vere in un file fuori dal repo: traduzione riuscita con Azure (contatore di Google fermo, seconda richiesta uguale dalla cache); con la riga `exhausted=true` per Azure inserita a mano, salto a Google con il contatore dei caratteri che sale.
 - Online, dopo il deploy di `translate-message` (v23): traduzioni fatte dall'app registrate in cache con `provider = azure`, nessun errore nei log, nessuna riga nel contatore (atteso con Azure primario).
+
+### 2026-09-28 — Supabase locale e test end-to-end in locale
+- Il database locale si ricrea dalle sole migrazioni: `drop_v1_push_trigger` salta se la tabella v1 non esiste; permessi di tabella espliciti (`20260928130000_explicit_table_grants.sql`), uguali a quelli online (le versioni recenti di Supabase non li danno più di default). Entrambe solo per repo/locale, **non applicate online**.
+- **Storico migrazioni online**: contiene solo le migrazioni della v1; le v2 sono state applicate a mano. Mai `supabase db push` sul progetto online.
+- `supabase/seed.sql` (solo locale): spegne il trigger delle notifiche e il job di pulizia foto, che puntano alle funzioni online; `scripts/e2e-local.mjs` (`pnpm test:e2e:local`) si ferma se non sono spenti, se Supabase non è locale o se la 5173 è occupata. Account di prova solo `@local.test`.
+- `config.toml`: analytics spento (il container vector su Windows restava in un ciclo di riavvii). `supabase db reset` fallisce con `uv_spawn`: al suo posto `supabase stop --no-backup` + `supabase start`.
+
+### 2026-09-28 — Contatore della traduzione online
+- Migrazione `20260928120000_translation_usage.sql` applicata online a mano (SQL in transazione), con grant esplicito a `service_role`; verificati RLS attiva, EXECUTE delle due funzioni solo a `service_role`, permessi di tabella solo a `service_role`.
+- `translate-message` distribuita (v23, `verify_jwt` invariato): prova dall'app riuscita, traduzioni in cache con `provider = azure`, nessun errore.
+
+### 2026-09-28 — Tour guidato e demo senza account
+- Tutte le letture/scritture passano da un'interfaccia dati unica (`lib/supabaseDataApi.ts`, `useDataApi()`); tour e demo usano una versione in memoria (`features/sandbox`) con le stesse pagine. Mentre la sandbox è aperta l'app vera è smontata e il client Supabase lancia un errore se usato.
+- Tour a passi con evidenziazione (overlay scritto a mano, `features/tour`), avvio automatico al primo accesso (chiave `familychat-tour-seen`), «Rivedi la guida» in Account apre il tour; demo con «Prova la demo» e «Esci dalla demo». Testi di tour, demo e installazione in it/ro/en/fr.
+- Dopo la registrazione vera, se il tour è stato visto, `tutorial_seen_at` si scrive con il profilo; al login su un dispositivo nuovo la guida a schede non si sovrappone al tour.
+- Dal test su telefono: «Guarda il tour» pulsante principale e «Prova la demo» secondario; nella demo un avviso (bordo rosso, chiudibile) dice che la traduzione automatica non è attiva.
+- Test: nessuna richiesta a Supabase durante tour e demo, dal caricamento alla registrazione vera.
+
+### 2026-09-28 — Ordine dei messaggi e paginazione
+- Causa del fallimento intermittente di lesson10: messaggi con lo stesso `created_at` al microsecondo (trovati nei dati dei test), ordinati in modo diverso da app e database. Ora ordine `created_at` poi `id` ovunque (`features/chat/messageOrder.ts`), orari confrontati come istante e non come testo.
+- «Carica messaggi precedenti» pagina sulla coppia (`created_at`, `id`): prima un messaggio con lo stesso orario al bordo di pagina veniva saltato. Test deterministici per entrambi; lesson10 10/10.
+
+### 2026-09-28 — Installazione dell'app e nuova versione
+- Pulsante «Installa» (evento `beforeinstallprompt` intercettato all'avvio), istruzioni su iPhone al posto dell'avviso delle notifiche finché l'app non è installata, «Non ora» per 14 giorni, sezione «App sul telefono» in Account; mai in tour e demo. Manifest senza errori al controllo di Chrome; nessun campo `id` aggiunto.
+- Barretta «È disponibile una nuova versione · Aggiorna»: al ritorno in primo piano (al massimo ogni 10 minuti, solo in produzione) confronta lo script principale di `index.html` con quello in esecuzione; verificata su build di produzione in locale.
+- Prova su Android vero con Google Play e su iPhone ancora da fare (vedi `PLAN.md`).
+
+### 2026-09-28 — README, licenza e immagini
+- README riscritto in inglese (`README.md`) e italiano (`README.it.md`), `LICENSE` con tutti i diritti riservati.
+- GIF e screenshot del tour in `docs/media/`, registrati nel Chrome dell'emulatore Android Pixel_6 (lingua italiana, solo sandbox, nessuna richiesta a Supabase).
+
