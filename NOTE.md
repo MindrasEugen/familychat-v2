@@ -244,3 +244,8 @@ fondo restano in `PROMPT_REACT_REWRITE.md` (non ripetute qui).
 - `tests/e2e/chat-scroll.spec.ts`: foto e traduzioni rallentate di 2 s e `overflow-anchor: none` (come Safari); fallisce sul codice precedente, passa (4 ripetizioni) con la correzione.
 - `playwright.config.ts`: `workers: 1` (i test e2e condividono la camera di prova: in parallelo i messaggi si mescolavano, falsi fallimenti visti) e `webServer` con `npx vite` invece di `pnpm dev`, che si blocca per il workspace in `C:\Users\mandr`.
 - **Lezione 8, verificata dopo il deploy** (2026-09-26): `send-push` distribuita dall'utente; stessa prova (messaggio di A, A e B sullo stesso dispositivo finto, C su un altro) → `{"sent":1}` (prima 2). Sottoscrizioni finte `push.invalid/e2e-*` rimosse.
+
+### 2026-09-28 — Livello Azure della traduzione verificato
+- La catena è ora Azure → Google → Mistral (Azure primario): la voce di `PLAN.md` "Azure mai esercitato" era superata ed è stata tolta.
+- In locale, con le chiavi vere in un file fuori dal repo: traduzione riuscita con Azure (contatore di Google fermo, seconda richiesta uguale dalla cache); con la riga `exhausted=true` per Azure inserita a mano, salto a Google con il contatore dei caratteri che sale.
+- Online, dopo il deploy di `translate-message` (v23): traduzioni fatte dall'app registrate in cache con `provider = azure`, nessun errore nei log, nessuna riga nel contatore (atteso con Azure primario).

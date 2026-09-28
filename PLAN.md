@@ -19,7 +19,6 @@ in `NOTE.md` — consultarlo per il "perché" dietro una scelta già presa.
 - [ ] Testare l'invio foto con un vero file HEIC (nessun campione disponibile finora — verificato solo il percorso PNG/JPEG via `createImageBitmap`, vedi `NOTE.md`, 2026-09-07).
 
 ### Traduzione (Edge Function)
-- [ ] Livello Azure configurato (regione `northeurope`) ma mai esercitato davvero: entra in gioco solo se Google fallisce. Verificarlo forzando un fallimento di Google (es. in un ambiente di prova) prima di contarci.
 - [ ] **Azione dell'utente, al momento dell'upgrade**: Google Cloud è in free trial, dove le quote non sono modificabili. Quando si passa all'account a pagamento, impostare subito "Characters per day" (~15.000) nelle quote di Cloud Translation API, prima di qualunque addebito (vedi `supabase/functions/.env.example`).
 - [ ] **Concordato con l'utente, da fare più avanti**: glossario di nomi/soprannomi di famiglia da NON tradurre (marcati come non traducibili nelle richieste a Google/Azure). Scartati invece il glossario di sostituzioni cieche (ambiguo, es. "bomba → awesome") e le correzioni passate come esempi a un LLM (costo/prevedibilità) — vedi `NOTE.md`, 2026-09-25.
 - [ ] Verificare in chat che i messaggi di sole emoji/punteggiatura restino senza "Tradotto" né "Correggi traduzione" (correzione del 2026-09-25). Le vecchie voci Mistral in memoria con frasi miste (testo + emoji) potrebbero avere l'emoji alterata: si sistemano con "Correggi" se capita di vederle.
@@ -32,7 +31,12 @@ in `NOTE.md` — consultarlo per il "perché" dietro una scelta già presa.
 - [ ] Su telefono vero: pulsante fotocamera (soprattutto **Brave su Android**, il caso che lo ha motivato) e "Scarica" dalla vista a schermo intero, anche nell'app installata (PWA) e su iPhone.
 
 ### Tutorial di benvenuto
-- [ ] Far rileggere i testi in rumeno e francese a chi parla la lingua (`src/features/tutorial/tutorialTexts.ts`) — scritti da Claude, non ancora rivisti da un madrelingua.
+- [ ] Far rileggere i testi in rumeno e francese a chi parla la lingua: guida a schede (`src/features/tutorial/tutorialTexts.ts`, scritta da Claude, non ancora rivista da un madrelingua). I testi di tour, demo e installazione (`tutorialTexts.ts` e `src/features/install/installTexts.ts`) sono invece le traduzioni fornite dall'utente il 2026-09-28.
+
+### Installazione app (PWA) e aggiornamenti
+- [ ] Su Android con Google Play (Chrome aggiornato): dopo il login compare «Installa», si apre la finestra di installazione di Chrome, «Non ora» nasconde la scheda, «App sul telefono» in Account cambia dopo l'installazione. Non provato sull'emulatore Pixel_6 (immagine senza Google Play, Chrome 109): verificato solo con evento simulato nei test.
+- [ ] Su iPhone non installato: istruzioni «Condividi» → «Aggiungi alla schermata Home» al posto dell'avviso delle notifiche; dopo l'installazione l'avviso delle notifiche torna come prima.
+- [ ] Al prossimo deploy: riprendere dal background l'app già aperta e controllare che compaia «È disponibile una nuova versione · Aggiorna» (controllo al ritorno in primo piano, al massimo ogni 10 minuti). Verificato solo su build di produzione in locale.
 
 ### Notifiche push
 - [ ] Ricezione reale confermata dall'utente il 2026-09-25 (vedi `NOTE.md`). Restano da provare: nessuna notifica con "Notifiche di questa camera" spento; due account sullo stesso telefono nella stessa camera → una sola notifica; soppressione quando la camera è già aperta; comportamento del click sulla notifica.
