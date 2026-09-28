@@ -285,7 +285,9 @@ Deno.serve(async (req: Request) => {
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
-    await supabase.from("AAA3_translation_memory").upsert(
+    // supabase-js non lancia sugli errori del database: li restituisce in
+    // { error }, quindi senza questo controllo il catch sotto non li vedrebbe mai.
+    const { error } = await supabase.from("AAA3_translation_memory").upsert(
       {
         source_text: text,
         source_lang: result.sourceLang,
@@ -295,6 +297,7 @@ Deno.serve(async (req: Request) => {
       },
       { onConflict: "source_text_normalized,source_lang,target_lang" },
     );
+    if (error) console.error("translate-message: cache write failed (non-fatal)", error);
   } catch (err) {
     console.error("translate-message: cache write failed (non-fatal)", err);
   }
