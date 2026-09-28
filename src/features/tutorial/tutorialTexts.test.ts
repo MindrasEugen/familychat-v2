@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { TOUR_STEPS } from '../tour/tourSteps'
+import { getAppTexts } from '../install/installTexts'
 import { getTourTexts, getTutorialTexts, type TutorialLang } from './tutorialTexts'
 
 const LANGS: TutorialLang[] = ['it', 'ro', 'en', 'fr']
@@ -22,6 +23,7 @@ const UI_LABELS = ['Crea account', 'Continua', 'Crea camera', 'Genera nuovo invi
 describe.each([
   ['tour', getTourTexts],
   ['guida a schede', getTutorialTexts],
+  ['installazione e nuova versione', getAppTexts],
 ] as const)('testi: %s', (_name, getTexts) => {
   const italian = flatten(getTexts('it'))
 
