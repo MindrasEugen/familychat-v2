@@ -25,6 +25,7 @@ import { openSandbox, useSandboxMode } from './features/sandbox/sandboxMode'
 import { useAutoStartTour } from './features/tour/useAutoStartTour'
 import { getTourTexts } from './features/tutorial/tutorialTexts'
 import { WelcomeTutorial } from './features/tutorial/WelcomeTutorial'
+import { UpdateBar } from './features/update/UpdateBar'
 import { queryClient } from './lib/queryClient'
 
 // Tiene le etichette dello switcher (username/avatar) allineate al profilo
@@ -138,6 +139,7 @@ function AppLayout() {
       </Routes>
       <TabBar />
       <WelcomeTutorial />
+      <UpdateBar />
     </>
   )
 }
