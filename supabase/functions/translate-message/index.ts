@@ -24,8 +24,9 @@
 // nessun SDK necessario.
 //
 // Cache/memoria condivisa: prima di chiamare qualunque servizio, il client
-// controlla già AAA3_translation_memory (lookup diretto, RLS permissiva) — qui
-// arriva solo su un vero cache miss. Dopo aver ottenuto una traduzione, questa
+// controlla già AAA3_translation_memory (lookup diretto, RLS permissiva), e
+// la funzione la ricontrolla comunque prima di chiamare un servizio (vedi
+// sotto, in Deno.serve). Dopo aver ottenuto una traduzione, questa
 // funzione la scrive in cache con SUPABASE_SERVICE_ROLE_KEY (bypassa RLS,
 // appropriato per una scrittura autoritativa lato server) — il vincolo DB
 // "no_silent_noop" e il trigger anti-sovrascrittura delle correzioni manuali
@@ -263,6 +264,35 @@ Deno.serve(async (req: Request) => {
     });
   }
 
+  const supabase = createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+  );
+
+  // Il client controlla già la cache, ma la si ricontrolla qui: copre due
+  // familiari che aprono lo stesso messaggio insieme (il secondo trova la
+  // voce appena scritta dal primo) e chi chiama la funzione direttamente.
+  // Stessa normalizzazione e stessa priorità alle correzioni del client.
+  // Best-effort: se la lettura fallisce si traduce comunque.
+  try {
+    const { data: cached, error } = await supabase
+      .from("AAA3_translation_memory")
+      .select("translated_text, source_lang")
+      .eq("source_text_normalized", text.trim().toLowerCase())
+      .eq("target_lang", targetLang)
+      .order("corrected_by_user", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (error) console.error("translate-message: cache read failed (non-fatal)", error);
+    if (cached) {
+      return new Response(JSON.stringify({ translatedText: cached.translated_text, sourceLang: cached.source_lang }), {
+        headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+      });
+    }
+  } catch (err) {
+    console.error("translate-message: cache read failed (non-fatal)", err);
+  }
+
   const result =
     (await translateWithAzure(text, targetLang)) ??
     (await translateWithGoogle(text, targetLang)) ??
@@ -281,10 +311,6 @@ Deno.serve(async (req: Request) => {
   // risposta all'utente — la traduzione è comunque valida da mostrare ora,
   // semplicemente non entra (o non aggiorna) la cache condivisa.
   try {
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-    );
     // supabase-js non lancia sugli errori del database: li restituisce in
     // { error }, quindi senza questo controllo il catch sotto non li vedrebbe mai.
     const { error } = await supabase.from("AAA3_translation_memory").upsert(
