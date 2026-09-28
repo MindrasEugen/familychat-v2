@@ -1,7 +1,7 @@
 import { QueryClientProvider } from '@tanstack/react-query'
 import { useEffect } from 'react'
-import { Navigate, NavLink, Route, Routes, useMatch } from 'react-router-dom'
-import { ChatIcon, TranslateIcon, UserIcon } from './components/icons'
+import { Navigate, Route, Routes } from 'react-router-dom'
+import { TabBar } from './components/TabBar'
 import { AccountPage } from './features/auth/AccountPage'
 import { AddAccountPage } from './features/auth/AddAccountPage'
 import { CompleteProfilePage } from './features/auth/CompleteProfilePage'
@@ -20,7 +20,6 @@ import { useAuthStatus } from './features/auth/useAuthStatus'
 import { RoomChatPage } from './features/chat/RoomChatPage'
 import { RoomInfoPage } from './features/rooms/RoomInfoPage'
 import { RoomsListPage } from './features/rooms/RoomsListPage'
-import { useRooms, useRoomsRealtime } from './features/rooms/useRooms'
 import { TranslatorPage } from './features/translator/TranslatorPage'
 import { WelcomeTutorial } from './features/tutorial/WelcomeTutorial'
 import { queryClient } from './lib/queryClient'
@@ -34,48 +33,6 @@ function useSyncActiveAccountProfile() {
   useEffect(() => {
     if (profile) updateActiveAccountProfile(profile.username, profile.avatar_url)
   }, [profile])
-}
-
-// Barra in basso, solo per chi ha fatto l'accesso. Nascosta dentro una
-// chat: lì il fondo dello schermo è della barra di scrittura.
-function TabBar() {
-  const { status, session } = useAuthStatus()
-  const inChat = useMatch('/rooms/:roomId/*')
-  // Qui e non nella lista camere: la barra è montata su tutte le pagine
-  // dopo l'accesso, così il pallino dei non letti su "Camere" resta
-  // aggiornato anche dal traduttore o dall'account.
-  const userId = session?.user.id
-  const roomsQuery = useRooms(userId)
-  useRoomsRealtime(userId)
-  const totalUnread = roomsQuery.data?.reduce((sum, room) => sum + room.unread_count, 0) ?? 0
-
-  if (status !== 'authenticated' || inChat) return null
-
-  return (
-    <nav className="tabbar" aria-label="Navigazione principale">
-      <div className="tabbar-inner">
-        <NavLink to="/rooms">
-          <span className="tab-icon">
-            <ChatIcon />
-            {totalUnread > 0 && (
-              <span className="tab-badge" aria-label={`${totalUnread} messaggi non letti`}>
-                {totalUnread > 99 ? '99+' : totalUnread}
-              </span>
-            )}
-          </span>
-          Camere
-        </NavLink>
-        <NavLink to="/translator">
-          <TranslateIcon />
-          Traduttore
-        </NavLink>
-        <NavLink to="/account">
-          <UserIcon />
-          Account
-        </NavLink>
-      </div>
-    </nav>
-  )
 }
 
 function AppLayout() {

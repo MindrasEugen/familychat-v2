@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useDataApi } from '../../lib/dataApi'
 import { supabase } from '../../lib/supabaseClient'
 import { urlBase64ToUint8Array, VAPID_PUBLIC_KEY } from '../../lib/vapidKey'
 
@@ -50,7 +51,11 @@ async function serviceWorkerRegistration(): Promise<ServiceWorkerRegistration | 
 // E il database deve avere la riga (utente, endpoint). Solo la prima non
 // basta: con due account sullo stesso telefono, o se la riga è andata persa,
 // la campanella risultava "attiva" senza che arrivasse nulla.
+// Nel tour e nella demo resta spenta: senza stato, campanella e avviso non
+// compaiono (e le notifiche vere non vengono toccate).
 export function usePushSubscriptionStatus(userId: string | undefined) {
+  const { sandbox } = useDataApi()
+
   return useQuery({
     queryKey: pushStatusQueryKey(userId),
     queryFn: async (): Promise<PushStatus> => {
@@ -74,7 +79,7 @@ export function usePushSubscriptionStatus(userId: string | undefined) {
       if (error) throw error
       return data ? 'subscribed' : 'unsubscribed'
     },
-    enabled: Boolean(userId),
+    enabled: Boolean(userId) && !sandbox,
   })
 }
 

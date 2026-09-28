@@ -1,3 +1,4 @@
+import { useDataApi } from '../../lib/dataApi'
 import { useSessionStore } from './sessionStore'
 import { useProfile } from './useProfile'
 
@@ -7,10 +8,16 @@ export type AuthStatus = 'loading' | 'guest' | 'needs-profile' | 'authenticated'
 // dalle guardie di route (RequireAuth/GuestOnly/RequireSessionNoProfile/
 // RequirePasswordRecovery) sia da chi ha bisogno di sapere chi è l'utente
 // autenticato (es. la nav).
+// Nel tour e nella demo l'utente è quello d'esempio della sandbox, anche se
+// sul dispositivo c'è una sessione vera (ripasso da Account).
 export function useAuthStatus() {
-  const session = useSessionStore((state) => state.session)
-  const initializing = useSessionStore((state) => state.initializing)
-  const isPasswordRecovery = useSessionStore((state) => state.isPasswordRecovery)
+  const api = useDataApi()
+  const realSession = useSessionStore((state) => state.session)
+  const realInitializing = useSessionStore((state) => state.initializing)
+  const realPasswordRecovery = useSessionStore((state) => state.isPasswordRecovery)
+  const session = api.sandbox ? api.sandboxSession : realSession
+  const initializing = api.sandbox ? false : realInitializing
+  const isPasswordRecovery = api.sandbox ? false : realPasswordRecovery
   const profileQuery = useProfile(session?.user.id)
 
   let status: AuthStatus
