@@ -13,5 +13,11 @@ export default defineConfig({
   },
   use: {
     baseURL: 'http://localhost:5173',
+    // Tour di primo accesso già visto: i test esistenti partono dalla pagina
+    // di accesso come prima. I test del tour lo tolgono (test.use).
+    storageState: {
+      cookies: [],
+      origins: [{ origin: 'http://localhost:5173', localStorage: [{ name: 'familychat-tour-seen', value: 'e2e' }] }],
+    },
   },
 })

@@ -7,11 +7,8 @@ import { RoomChatPage } from '../chat/RoomChatPage'
 import { RoomInfoPage } from '../rooms/RoomInfoPage'
 import { RoomsListPage } from '../rooms/RoomsListPage'
 import { TranslatorPage } from '../translator/TranslatorPage'
-import { createSandboxDataApi, createSandboxStore, type SandboxStore } from './sandboxDataApi'
-
-export interface Sandbox {
-  store: SandboxStore
-}
+import { SandboxStoreContext, type Sandbox } from './sandboxContext'
+import { createSandboxDataApi, createSandboxStore } from './sandboxDataApi'
 
 // Le stesse pagine dell'app vera, con i dati d'esempio in memoria: router
 // in memoria (l'URL del browser non cambia), React Query e sorgente dati
@@ -37,21 +34,23 @@ export function SandboxApp({
   })
 
   return (
-    <DataApiContext.Provider value={sandbox.api}>
-      <QueryClientProvider client={sandbox.queryClient}>
-        <MemoryRouter initialEntries={[initialPath]}>
-          <Routes>
-            <Route path="/rooms" element={<RoomsListPage />} />
-            <Route path="/rooms/:roomId" element={<RoomChatPage />} />
-            <Route path="/rooms/:roomId/info" element={<RoomInfoPage />} />
-            <Route path="/translator" element={<TranslatorPage />} />
-            {extraRoutes}
-            <Route path="*" element={<Navigate to="/rooms" replace />} />
-          </Routes>
-          <TabBar />
-          {children?.(sandbox)}
-        </MemoryRouter>
-      </QueryClientProvider>
-    </DataApiContext.Provider>
+    <SandboxStoreContext.Provider value={sandbox.store}>
+      <DataApiContext.Provider value={sandbox.api}>
+        <QueryClientProvider client={sandbox.queryClient}>
+          <MemoryRouter initialEntries={[initialPath]}>
+            <Routes>
+              <Route path="/rooms" element={<RoomsListPage />} />
+              <Route path="/rooms/:roomId" element={<RoomChatPage />} />
+              <Route path="/rooms/:roomId/info" element={<RoomInfoPage />} />
+              <Route path="/translator" element={<TranslatorPage />} />
+              {extraRoutes}
+              <Route path="*" element={<Navigate to="/rooms" replace />} />
+            </Routes>
+            <TabBar />
+            {children?.(sandbox)}
+          </MemoryRouter>
+        </QueryClientProvider>
+      </DataApiContext.Provider>
+    </SandboxStoreContext.Provider>
   )
 }

@@ -1,10 +1,11 @@
-import { useState, type FormEvent } from 'react'
+import { useState, type FormEvent, type ReactNode } from 'react'
 import type { Session, SupabaseClient } from '@supabase/supabase-js'
 import { supabase } from '../../lib/supabaseClient'
 import type { Database } from '../../lib/database.types'
 import { ChatIcon } from '../../components/icons'
 
-type Mode = 'signin' | 'signup' | 'forgot-password'
+export type LoginMode = 'signin' | 'signup' | 'forgot-password'
+type Mode = LoginMode
 
 interface LoginPageProps {
   // Di default il client "attivo" condiviso (login/registrazione normali).
@@ -21,6 +22,13 @@ interface LoginPageProps {
   // Falso quando la pagina è dentro AddAccountPage, che ha già il suo
   // header: niente logo ripetuto.
   showBrand?: boolean
+  // Modalità e campi iniziali: la registrazione finta del tour parte già
+  // compilata, e alla fine del tour si apre direttamente "Registrati".
+  initialMode?: Mode
+  initialEmail?: string
+  initialPassword?: string
+  // Contenuto in fondo alla pagina (es. "Prova la demo" su /login).
+  footer?: ReactNode
 }
 
 export function Brand() {
@@ -34,10 +42,18 @@ export function Brand() {
   )
 }
 
-export function LoginPage({ client = supabase, onSignedIn, showBrand = true }: LoginPageProps) {
-  const [mode, setMode] = useState<Mode>('signin')
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
+export function LoginPage({
+  client = supabase,
+  onSignedIn,
+  showBrand = true,
+  initialMode = 'signin',
+  initialEmail = '',
+  initialPassword = '',
+  footer,
+}: LoginPageProps) {
+  const [mode, setMode] = useState<Mode>(initialMode)
+  const [email, setEmail] = useState(initialEmail)
+  const [password, setPassword] = useState(initialPassword)
   const [loading, setLoading] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [infoMessage, setInfoMessage] = useState<string | null>(null)
@@ -192,7 +208,7 @@ export function LoginPage({ client = supabase, onSignedIn, showBrand = true }: L
         {errorMessage && <p role="alert">{errorMessage}</p>}
         {infoMessage && <p role="status">{infoMessage}</p>}
 
-        <button type="submit" disabled={loading}>
+        <button type="submit" disabled={loading} data-tour="signup-submit">
           {mode === 'signin' ? 'Accedi' : 'Crea account'}
         </button>
       </form>
@@ -211,6 +227,7 @@ export function LoginPage({ client = supabase, onSignedIn, showBrand = true }: L
           {mode === 'signin' ? 'Non hai un account? Registrati' : 'Hai già un account? Accedi'}
         </button>
       </div>
+      {footer}
     </section>
   )
 }

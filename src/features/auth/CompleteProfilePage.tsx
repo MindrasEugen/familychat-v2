@@ -9,10 +9,11 @@ function isPostgrestError(error: PostgrestError | Error): error is PostgrestErro
   return 'code' in error
 }
 
-export function CompleteProfilePage() {
+// initialUsername: nel tour il nome è già compilato.
+export function CompleteProfilePage({ initialUsername = '' }: { initialUsername?: string }) {
   const { session } = useAuthStatus()
   const completeProfile = useCompleteProfile(session?.user.id)
-  const [username, setUsername] = useState('')
+  const [username, setUsername] = useState(initialUsername)
   const [avatarFile, setAvatarFile] = useState<File | null>(null)
   const [validationError, setValidationError] = useState<string | null>(null)
 
@@ -55,7 +56,7 @@ export function CompleteProfilePage() {
         <h1>Completa il profilo</h1>
         <p className="muted">Scegli lo username con cui la famiglia ti vedrà nelle camere.</p>
       </div>
-      <form onSubmit={handleSubmit} className="stack">
+      <form onSubmit={handleSubmit} className="stack" data-tour="profile-form">
         <label className="field">
           Username
           <input

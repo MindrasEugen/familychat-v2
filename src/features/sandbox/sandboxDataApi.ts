@@ -22,6 +22,8 @@ interface MemberRow {
 }
 
 export interface SandboxState {
+  // Il tour ha "creato l'account" con il modulo finto (nessuna chiamata).
+  signedUp: boolean
   profile: Profile | null
   relatives: Record<string, { username: string; avatar_url: string | null }>
   rooms: Room[]
@@ -76,6 +78,7 @@ function randomCode() {
 export function createSandboxStore({ withProfile }: { withProfile: boolean }) {
   const now = new Date().toISOString()
   return createStore<SandboxState>(() => ({
+    signedUp: withProfile,
     profile: withProfile
       ? { id: SANDBOX_USER_ID, username: 'Ospite', avatar_url: null, created_at: now, tutorial_seen_at: now }
       : null,

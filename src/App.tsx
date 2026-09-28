@@ -21,6 +21,8 @@ import { RoomChatPage } from './features/chat/RoomChatPage'
 import { RoomInfoPage } from './features/rooms/RoomInfoPage'
 import { RoomsListPage } from './features/rooms/RoomsListPage'
 import { TranslatorPage } from './features/translator/TranslatorPage'
+import { useSandboxMode } from './features/sandbox/sandboxMode'
+import { useAutoStartTour } from './features/tour/useAutoStartTour'
 import { WelcomeTutorial } from './features/tutorial/WelcomeTutorial'
 import { queryClient } from './lib/queryClient'
 
@@ -37,6 +39,9 @@ function useSyncActiveAccountProfile() {
 
 function AppLayout() {
   useSyncActiveAccountProfile()
+  useAutoStartTour()
+  // Alla fine del tour si arriva qui con "Registrati" già aperto.
+  const openSignup = useSandboxMode((state) => state.openSignup)
 
   return (
     <>
@@ -47,6 +52,7 @@ function AppLayout() {
           element={
             <GuestOnly>
               <LoginPage
+                initialMode={openSignup ? 'signup' : 'signin'}
                 onSignedIn={(session) =>
                   registerAccount(useAccountsStore.getState().activeSlot, session.user.id)
                 }
