@@ -55,7 +55,7 @@ della v1, vedi `PROMPT_REACT_REWRITE.md` lezione 7).
 ## Stato
 
 Funzionalità principali implementate (accesso e multi-account, camere e
-inviti, chat con foto e traduzione automatica Google → Azure → Mistral,
+inviti, chat con foto e traduzione automatica Azure → Google → Mistral,
 notifiche push, PWA) e nuova grafica con tema scuro/chiaro. Online su
 Render in parallelo alla v1. Vedi `PLAN.md` per cosa resta aperto e
 `NOTE.md` per lo storico.

@@ -1,11 +1,16 @@
 // Edge Function: translate-message
-// Catena di fallback (vedi PROMPT_REACT_REWRITE.md, "Traduzione: raccomandazione
-// per la v2"): Google Cloud Translation (primario) -> Azure AI Translator
-// (secondo livello) -> Mistral (rete di sicurezza finale, già in uso da v1).
+// Catena di fallback: Azure AI Translator (primario) -> Google Cloud
+// Translation (secondo livello) -> Mistral (rete di sicurezza finale, già in
+// uso da v1). Azure è primo perché il suo livello gratuito F0 si ferma da
+// solo al limite (risponde 403); Google invece oltre la quota gratuita non
+// dà errore ma inizia ad addebitare, quindi va dopo.
 // Ogni livello è attivo solo se la propria chiave è configurata (Deno.env.get
 // ritorna undefined altrimenti) — nessuno dei tre blocca gli altri due.
+// Qualunque errore di un livello (quota, fatturazione disattivata, account
+// chiuso, rete) vale come "servizio non disponibile": si passa al successivo
+// senza mostrare nulla all'utente.
 //
-// Scelta del secondo livello, verificata al momento dell'implementazione
+// Scelta di Azure, verificata al momento dell'implementazione
 // (i prezzi in questo settore cambiano spesso, vedi nota nel documento):
 // DeepL era il candidato originale, ma da luglio 2026 il suo piano gratuito
 // è diventato un pacchetto "Developer" da 1M caratteri UNA TANTUM, non più
@@ -66,8 +71,9 @@ interface TranslationResult {
 
 // Google Cloud Translation v2 (REST, chiave API semplice — non richiede
 // service account/OAuth). Ritorna null (mai lancia) su qualunque errore:
-// quota gratuita esaurita, chiave assente/non valida, rete — in ogni caso
-// il chiamante deve solo passare al fallback Mistral, non fallire la richiesta.
+// quota esaurita, fatturazione disattivata, account chiuso, chiave
+// assente/non valida, rete — in ogni caso il chiamante deve solo passare al
+// fallback Mistral, non fallire la richiesta.
 async function translateWithGoogle(text: string, targetLang: string): Promise<TranslationResult | null> {
   const apiKey = Deno.env.get("GOOGLE_TRANSLATE_API_KEY");
   if (!apiKey) return null;
@@ -134,7 +140,7 @@ async function translateWithAzure(text: string, targetLang: string): Promise<Tra
 
     if (!response.ok) {
       const detail = await response.text();
-      console.error(`translate-message: Azure ${response.status}, falling back to Mistral`, detail);
+      console.error(`translate-message: Azure ${response.status}, falling back to Google`, detail);
       return null;
     }
 
@@ -149,7 +155,7 @@ async function translateWithAzure(text: string, targetLang: string): Promise<Tra
       provider: "azure",
     };
   } catch (err) {
-    console.error("translate-message: Azure fetch error, falling back to Mistral", err);
+    console.error("translate-message: Azure fetch error, falling back to Google", err);
     return null;
   }
 }
@@ -258,8 +264,8 @@ Deno.serve(async (req: Request) => {
   }
 
   const result =
-    (await translateWithGoogle(text, targetLang)) ??
     (await translateWithAzure(text, targetLang)) ??
+    (await translateWithGoogle(text, targetLang)) ??
     (await translateWithMistral(text, targetLang));
 
   if (!result) {

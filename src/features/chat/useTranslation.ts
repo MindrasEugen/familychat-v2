@@ -21,7 +21,7 @@ interface TranslationResult {
 // Traduzione automatica di un messaggio nella lingua del lettore. Controlla
 // prima la memoria condivisa (AAA3_translation_memory, RLS permissiva a
 // tutta la famiglia) — solo su un vero cache miss chiama la Edge Function,
-// che gestisce l'intera catena di fallback (Google -> Azure -> Mistral) e
+// che gestisce l'intera catena di fallback (Azure -> Google -> Mistral) e
 // scrive lei stessa in cache. Una correzione manuale (vedi
 // useCorrectTranslation) ha sempre la priorità: il lookup ordina per
 // corrected_by_user così un'entry corretta vince anche se ne esistesse
