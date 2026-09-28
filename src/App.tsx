@@ -56,12 +56,14 @@ function AppLayout() {
               <LoginPage
                 initialMode={openSignup ? 'signup' : 'signin'}
                 footer={
+                  // Il tour è la via principale per capire l'app; la demo libera
+                  // viene dopo, con lo stile secondario (contorno).
                   <div className="stack sandbox-links">
+                    <button type="button" onClick={() => openSandbox('tour')}>
+                      {getTourTexts().watchTour}
+                    </button>
                     <button type="button" className="btn-ghost" onClick={() => openSandbox('demo')}>
                       {getTourTexts().tryDemo}
-                    </button>
-                    <button type="button" className="btn-link" onClick={() => openSandbox('tour')}>
-                      {getTourTexts().watchTour}
                     </button>
                   </div>
                 }
