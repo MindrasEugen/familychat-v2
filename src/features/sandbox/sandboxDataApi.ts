@@ -26,6 +26,8 @@ interface MemberRow {
 export interface SandboxState {
   // Il tour ha "creato l'account" con il modulo finto (nessuna chiamata).
   signedUp: boolean
+  // Demo: avviso sulla traduzione chiuso con «×» (fino alla prossima demo).
+  demoNoteDismissed: boolean
   profile: Profile | null
   relatives: Record<string, { username: string; avatar_url: string | null }>
   rooms: Room[]
@@ -81,6 +83,7 @@ export function createSandboxStore({ withProfile }: { withProfile: boolean }) {
   const now = new Date().toISOString()
   return createStore<SandboxState>(() => ({
     signedUp: withProfile,
+    demoNoteDismissed: false,
     profile: withProfile
       ? { id: SANDBOX_USER_ID, username: getTourTexts().sandbox.guestName, avatar_url: null, created_at: now, tutorial_seen_at: now }
       : null,

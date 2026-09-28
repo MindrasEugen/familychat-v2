@@ -183,6 +183,7 @@ export interface TourTexts {
   tryDemo: string
   watchTour: string
   exitDemo: string
+  demo: { translationNote: string }
   sandbox: { guestName: string; joinRoomError: string }
 }
 
@@ -238,6 +239,10 @@ const TOUR_TEXTS: Record<TutorialLang, TourTexts> = {
     tryDemo: 'Prova la demo',
     watchTour: 'Come funziona? Guarda il tour',
     exitDemo: 'Esci dalla demo',
+    demo: {
+      translationNote:
+        'Demo: la traduzione automatica non è attiva. Le traduzioni che vedi sono solo esempi, i messaggi che scrivi tu non vengono tradotti.',
+    },
     sandbox: {
       guestName: 'Ospite',
       joinRoomError: 'Nella prova non puoi unirti a una camera vera: crea il tuo account per usare un codice invito.',
@@ -294,6 +299,10 @@ const TOUR_TEXTS: Record<TutorialLang, TourTexts> = {
     tryDemo: 'Încearcă demo-ul',
     watchTour: 'Cum funcționează? Vezi turul',
     exitDemo: 'Ieși din demo',
+    demo: {
+      translationNote:
+        'Demo: traducerea automată nu este activă. Traducerile pe care le vezi sunt doar exemple, mesajele pe care le scrii tu nu sunt traduse.',
+    },
     sandbox: {
       guestName: 'Oaspete',
       joinRoomError: 'În demo nu te poți alătura unei camere reale: creează-ți contul ca să folosești un cod de invitație.',
@@ -350,6 +359,10 @@ const TOUR_TEXTS: Record<TutorialLang, TourTexts> = {
     tryDemo: 'Try the demo',
     watchTour: 'How does it work? Watch the tour',
     exitDemo: 'Exit the demo',
+    demo: {
+      translationNote:
+        "Demo: automatic translation is off. The translations you see are just examples, the messages you write aren't translated.",
+    },
     sandbox: {
       guestName: 'Guest',
       joinRoomError: "In the demo you can't join a real room: create your account to use an invite code.",
@@ -406,6 +419,10 @@ const TOUR_TEXTS: Record<TutorialLang, TourTexts> = {
     tryDemo: 'Essayer la démo',
     watchTour: 'Comment ça marche ? Regarde la visite',
     exitDemo: 'Quitter la démo',
+    demo: {
+      translationNote:
+        'Démo : la traduction automatique n’est pas active. Les traductions que tu vois ne sont que des exemples, les messages que tu écris ne sont pas traduits.',
+    },
     sandbox: {
       guestName: 'Invité',
       joinRoomError: 'Dans la démo, tu ne peux pas rejoindre un vrai salon : crée ton compte pour utiliser un code d’invitation.',

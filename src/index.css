@@ -1027,6 +1027,32 @@ input:-webkit-autofill:focus {
   font-size: 14px;
 }
 
+/* Demo: avviso sottile sulla traduzione, sopra la barra di scrittura */
+.demo-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0 12px 6px;
+  padding: 8px 6px 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--raised);
+  color: var(--muted);
+  font-size: 12.5px;
+  line-height: 1.4;
+}
+.demo-note p {
+  flex: 1;
+}
+.demo-note .btn-link {
+  color: var(--muted);
+  padding: 2px;
+}
+.demo-note svg {
+  width: 16px;
+  height: 16px;
+}
+
 /* ---------- Tour guidato (sandbox) ---------- */
 
 /* "Prova la demo" / "Guarda il tour" sotto il modulo di accesso */

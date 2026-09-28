@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import { BackIcon, InfoIcon } from '../../components/icons'
 import { useAuthStatus } from '../auth/useAuthStatus'
 import { PushReminder } from '../notifications/PushControls'
+import { DemoTranslationNote } from '../sandbox/DemoTranslationNote'
 import { useDismissRoomNotifications } from '../notifications/usePushSubscription'
 import { useRoom, useRoomMembers } from '../rooms/useRoomDetail'
 import { useMarkRoomRead } from '../rooms/useRooms'
@@ -150,6 +151,7 @@ export function RoomChatPage() {
         </div>
       </div>
 
+      <DemoTranslationNote />
       <MessageComposer roomId={roomId} userId={userId} />
     </div>
   )
