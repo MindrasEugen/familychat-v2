@@ -8,7 +8,8 @@ A family chat where everyone writes in their own language and reads in theirs: m
   <img src="docs/media/tour.gif" width="280" alt="Guided tour, from the welcome screen to automatic translation (app shown in Italian)">
   <img src="docs/media/tour-traduzione.png" width="280" alt="A Romanian message shown translated into Italian (app shown in Italian)">
 </p>
-<!-- TODO: add the "Try the demo" link here. -->
+
+**[Try the app](https://familychat-v2.onrender.com)**: on the login page, tap «Come funziona? Guarda il tour» for a guided tour, or «Prova la demo» to explore with sample data. No account needed.
 
 ## Features
 
