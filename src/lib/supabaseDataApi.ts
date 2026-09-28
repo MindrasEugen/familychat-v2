@@ -206,11 +206,15 @@ export const supabaseDataApi = {
   // --- Messaggi ---
 
   // Ultima pagina di messaggi (o quella prima di `before`), in ordine
-  // cronologico.
+  // cronologico. A parità di created_at decide l'id, come nell'app
+  // (features/chat/messageOrder.ts).
   async getMessages(roomId: string, before?: string): Promise<Message[]> {
     let query = supabase.from('AAA3_chat_messages').select('*').eq('room_id', roomId)
     if (before) query = query.lt('created_at', before)
-    const { data, error } = await query.order('created_at', { ascending: false }).limit(MESSAGES_PAGE_SIZE)
+    const { data, error } = await query
+      .order('created_at', { ascending: false })
+      .order('id', { ascending: false })
+      .limit(MESSAGES_PAGE_SIZE)
     if (error) throw error
     return [...data].reverse()
   },

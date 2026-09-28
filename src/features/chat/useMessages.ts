@@ -5,6 +5,7 @@ import { useDataApi } from '../../lib/dataApi'
 import { supabase } from '../../lib/supabaseClient'
 import type { Database } from '../../lib/database.types'
 import { MESSAGES_PAGE_SIZE } from '../../lib/supabaseDataApi'
+import { mergeMessages } from './messageOrder'
 
 export { MESSAGES_PAGE_SIZE }
 // Tetto lato client (oltre al vincolo DB "AAA3_chat_messages_image_paths_max_10"),
@@ -16,18 +17,6 @@ type Message = Database['public']['Tables']['AAA3_chat_messages']['Row']
 
 export function messagesQueryKey(roomId: string | undefined) {
   return ['messages', roomId] as const
-}
-
-// Unisce per id (mai un semplice concat) e riordina per created_at — un
-// messaggio arrivato più volte da fonti diverse (fetch iniziale, realtime,
-// invio ottimistico) collassa sulla stessa riga invece di duplicarsi.
-// Vedi PROMPT_REACT_REWRITE.md, lezione 10: la lista non deve mai
-// svuotarsi e ripopolarsi da un elenco già in uso da una sottoscrizione
-// realtime attiva.
-function mergeMessages(existing: Message[], incoming: Message[]): Message[] {
-  const byId = new Map(existing.map((message) => [message.id, message]))
-  for (const message of incoming) byId.set(message.id, message)
-  return Array.from(byId.values()).sort((a, b) => a.created_at.localeCompare(b.created_at))
 }
 
 export function useMessages(roomId: string | undefined) {

@@ -55,7 +55,9 @@ async function dbBodies(client: SupabaseClient, runId: string): Promise<string[]
     .select('body')
     .eq('room_id', roomId as string)
     .like('body', `${runId} %`)
+    // Stesso ordine dell'app: a parità di created_at decide l'id.
     .order('created_at', { ascending: true })
+    .order('id', { ascending: true })
   if (error) throw error
   return data.map((row) => row.body as string)
 }
