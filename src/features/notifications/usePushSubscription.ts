@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useDataApi } from '../../lib/dataApi'
+import { isIos, isStandalone } from '../../lib/platform'
 import { supabase } from '../../lib/supabaseClient'
 import { urlBase64ToUint8Array, VAPID_PUBLIC_KEY } from '../../lib/vapidKey'
 
@@ -19,18 +20,6 @@ export type PushStatus =
 
 export function pushStatusQueryKey(userId: string | undefined) {
   return ['push-subscription-status', userId] as const
-}
-
-function isIos() {
-  return /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
-}
-
-function isStandalone() {
-  // navigator.standalone esiste solo su Safari iOS (non è nei tipi DOM).
-  return (
-    window.matchMedia('(display-mode: standalone)').matches ||
-    (navigator as Navigator & { standalone?: boolean }).standalone === true
-  )
 }
 
 function isBrave() {
