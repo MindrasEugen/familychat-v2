@@ -63,8 +63,22 @@ export function setActiveClientSlot(slot: AccountSlot) {
 // — undici file lo fanno già — senza dover passare un client come parametro
 // ovunque. Il proxy inoltra sempre alla CHIAMATA corrente su
 // `activeClient`, quindi riflette immediatamente un cambio di account.
+// Mentre tour o demo sono aperti (sandbox, vedi features/sandbox) l'app non
+// deve parlare con Supabase: qualunque uso del proxy lancia un errore invece
+// di partire in silenzio. Unica eccezione la chiusura dei canali realtime,
+// che l'app vera fa proprio mentre si smonta all'apertura della sandbox.
+let blockedReason: string | null = null
+const ALLOWED_WHILE_BLOCKED = new Set<PropertyKey>(['removeChannel', 'removeAllChannels'])
+
+export function blockSupabase(reason: string | null) {
+  blockedReason = reason
+}
+
 export const supabase = new Proxy({} as SupabaseClient<Database>, {
   get(_target, prop, _receiver) {
+    if (blockedReason && !ALLOWED_WHILE_BLOCKED.has(prop)) {
+      throw new Error(`Supabase non va usato ${blockedReason} (supabase.${String(prop)})`)
+    }
     const value = Reflect.get(activeClient as object, prop)
     return typeof value === 'function' ? value.bind(activeClient) : value
   },

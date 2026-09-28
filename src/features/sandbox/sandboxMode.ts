@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { blockSupabase } from '../../lib/supabaseClient'
 
 // Quale sandbox è aperta: il tour guidato, la demo libera, o nessuna (app
 // vera). Mentre è aperta, Root (main.tsx) smonta l'app vera: niente query,
@@ -24,6 +25,9 @@ export const useSandboxMode = create<SandboxModeState>(() => ({
 }))
 
 export function openSandbox(mode: SandboxMode, { review = false }: { review?: boolean } = {}) {
+  // Prima del cambio di stato: da qui in poi l'app vera si smonta e la
+  // sandbox parte, e nessuno dei due deve più chiamare Supabase.
+  blockSupabase(mode === 'tour' ? 'durante il tour' : 'durante la demo')
   useSandboxMode.setState({ mode, exitTo: window.location.pathname, openSignup: false, review })
 }
 
@@ -31,5 +35,6 @@ export function closeSandbox({ toSignup = false }: { toSignup?: boolean } = {}) 
   const { exitTo } = useSandboxMode.getState()
   const target = toSignup ? '/login' : (exitTo ?? '/')
   if (window.location.pathname !== target) window.history.replaceState(null, '', target)
+  blockSupabase(null)
   useSandboxMode.setState({ mode: null, exitTo: null, openSignup: toSignup, review: false })
 }
