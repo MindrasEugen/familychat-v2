@@ -152,3 +152,48 @@ test('pagina precedente con messaggi allo stesso orario sul bordo: nessuno salta
     await owner.client.from('AAA3_rooms').delete().eq('id', room.id)
   }
 })
+
+// Orari con un numero diverso di decimali, come li restituisce PostgREST
+// (senza zeri finali): l'ordine nell'app, arrivati via realtime e dopo un
+// ricaricamento, deve coincidere con quello del database. Gli id vanno in
+// senso opposto al tempo, così un confronto sbagliato non passa per caso.
+test('orari con decimali di lunghezza diversa: stesso ordine in app e nel database', async ({ page }) => {
+  const runId = newRunId()
+  const sender = await apiClient(env.E2E_EMAIL_B as string)
+  await openRoom(page, env.E2E_EMAIL_A as string, roomId as string)
+
+  const { error: probeError } = await sender.client
+    .from('AAA3_chat_messages')
+    .insert({ room_id: roomId, sender_id: sender.userId, body: `${runId} 000` })
+  if (probeError) throw probeError
+  await expect.poll(() => pageBodies(page, runId), { timeout: 30_000 }).toEqual([`${runId} 000`])
+
+  // Secondo intero nel futuro (così sono gli ultimi della camera).
+  const second = new Date(Math.ceil((Date.now() + 120_000) / 1000) * 1000).toISOString().slice(0, 19)
+  const rows = [
+    ['', '001'],
+    ['.000001', '002'],
+    ['.479999', '003'],
+    ['.48', '004'],
+    ['.480001', '005'],
+    ['.5', '006'],
+  ].map(([fraction, seq], index, all) => ({
+    // id decrescenti mentre il tempo cresce.
+    id: uuidStartingWith('fedcba'[all.length - 1 - index]),
+    created_at: `${second}${fraction}+00:00`,
+    body: `${runId} ${seq}`,
+  }))
+  // Inseriti in ordine sparso.
+  for (const row of [rows[3], rows[0], rows[5], rows[2], rows[4], rows[1]]) {
+    const { error } = await sender.client
+      .from('AAA3_chat_messages')
+      .insert({ ...row, room_id: roomId, sender_id: sender.userId })
+    if (error) throw error
+  }
+
+  const expected = [`${runId} 000`, ...rows.map((row) => row.body)]
+  expect(await dbBodies(sender.client, roomId as string, runId)).toEqual(expected)
+  await expect.poll(() => pageBodies(page, runId), { timeout: 30_000 }).toEqual(expected)
+  await page.reload()
+  await expect.poll(() => pageBodies(page, runId), { timeout: 30_000 }).toEqual(expected)
+})
