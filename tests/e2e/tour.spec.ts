@@ -1,5 +1,6 @@
 import fs from 'node:fs'
 import { expect, test, type Page } from '@playwright/test'
+import { createClient } from '@supabase/supabase-js'
 
 // Tour di primo accesso e demo: girano nella sandbox in memoria. Prima della
 // registrazione nessuna richiesta deve partire verso Supabase (auth,
@@ -91,6 +92,37 @@ test('"Salta" chiude il tour e lo segna come visto', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Accedi' })).toBeVisible()
   await expect(tour).toBeHidden()
   expect(requests).toEqual([])
+})
+
+// Registrazione vera dopo aver saltato il tour: il profilo nasce già con
+// tutorial_seen_at, quindi la guida a schede non compare. Crea un account:
+// solo sul Supabase locale (pnpm test:e2e:local), mai sul progetto reale.
+test('dopo il tour, la registrazione vera salva tutorial_seen_at e la guida a schede non compare', async ({ page }) => {
+  const url = new URL(env.VITE_SUPABASE_URL as string)
+  test.skip(!['127.0.0.1', 'localhost'].includes(url.hostname), 'crea un account: solo con Supabase locale')
+
+  const email = `e2e-tour-${Date.now()}@local.test`
+  const password = 'e2e-local-password'
+  await page.goto('/login')
+  await page.getByRole('dialog', { name: 'Tour di benvenuto' }).getByRole('button', { name: 'Salta' }).click()
+  await page.getByRole('button', { name: 'Non hai un account? Registrati' }).click()
+  await page.getByLabel('Email').fill(email)
+  await page.getByLabel('Password').fill(password)
+  await page.getByRole('button', { name: 'Crea account' }).click()
+
+  await page.getByLabel('Username').fill(`tour_${Date.now()}`)
+  await page.getByRole('button', { name: 'Continua' }).click()
+  await expect(page.getByRole('heading', { name: 'Le tue camere' })).toBeVisible()
+  await page.waitForTimeout(1_000)
+  await expect(page.getByRole('dialog', { name: 'Guida di benvenuto' })).toBeHidden()
+
+  const client = createClient(env.VITE_SUPABASE_URL as string, env.VITE_SUPABASE_ANON_KEY as string, {
+    auth: { persistSession: false },
+  })
+  const { data: auth, error } = await client.auth.signInWithPassword({ email, password })
+  if (error) throw error
+  const { data: profile } = await client.from('AAA3_profiles').select('tutorial_seen_at').eq('id', auth.user.id).single()
+  expect(profile?.tutorial_seen_at).not.toBeNull()
 })
 
 test.describe('demo libera', () => {
