@@ -42,6 +42,15 @@ describe.each([
 })
 
 describe('testi del tour', () => {
+  it('l’avviso della demo sulla traduzione esiste in tutte le lingue, tradotto', () => {
+    const italian = getTourTexts('it').demo.translationNote
+    for (const lang of LANGS) {
+      const note = getTourTexts(lang).demo.translationNote
+      expect(note.trim(), lang).not.toBe('')
+      if (lang !== 'it') expect(note, lang).not.toBe(italian)
+    }
+  })
+
   it('ogni passo ha titolo e testo in tutte le lingue', () => {
     for (const lang of LANGS) {
       for (const step of TOUR_STEPS) {

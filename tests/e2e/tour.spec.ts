@@ -59,6 +59,8 @@ test('il tour parte al primo accesso e arriva alla registrazione vera senza rich
   await tour.getByRole('button', { name: 'Avanti' }).click()
 
   await step('Scrivi un messaggio')
+  // L'avviso sulla traduzione è solo della demo libera.
+  await expect(page.getByRole('note')).toHaveCount(0)
   await page.getByLabel('Messaggio').fill('Ci sono anch’io!')
   await page.getByRole('button', { name: 'Invia' }).click()
 
@@ -193,5 +195,76 @@ test.describe('demo libera', () => {
     await page.getByRole('link', { name: /Famiglia/ }).click()
     await expect(page.getByText("Perfetto, allora ci vediamo all'una.")).toBeVisible()
     await expect(page.getByText('Messaggio di prova nella demo')).toBeHidden()
+  })
+})
+
+test.describe('pagina di accesso e avviso della demo', () => {
+  test.use({
+    storageState: {
+      cookies: [],
+      origins: [{ origin: 'http://localhost:5173', localStorage: [{ name: 'familychat-tour-seen', value: 'e2e' }] }],
+    },
+  })
+
+  test('«Guarda il tour» è il pulsante principale, «Prova la demo» secondario e dopo', async ({ page }) => {
+    await page.goto('/login')
+    const tour = page.getByRole('button', { name: 'Come funziona? Guarda il tour' })
+    const demo = page.getByRole('button', { name: 'Prova la demo' })
+    const signIn = page.getByRole('button', { name: 'Accedi' })
+
+    // Principale: stesso stile pieno di «Accedi». Secondario: contorno.
+    const background = (locator: typeof tour) => locator.evaluate((el) => getComputedStyle(el).backgroundColor)
+    expect(await tour.getAttribute('class')).toBeNull()
+    expect(await background(tour)).toBe(await background(signIn))
+    await expect(demo).toHaveClass('btn-ghost')
+    expect(await background(demo)).not.toBe(await background(signIn))
+    // Il tour viene prima.
+    const [tourBox, demoBox] = [await tour.boundingBox(), await demo.boundingBox()]
+    expect(tourBox!.y).toBeLessThan(demoBox!.y)
+  })
+
+  test('nella demo compare l’avviso sulla traduzione, si chiude con «×», senza richieste a Supabase', async ({ page }) => {
+    const requests = recordSupabaseRequests(page)
+    await page.goto('/login')
+    await page.getByRole('button', { name: 'Prova la demo' }).click()
+    await page.getByRole('link', { name: /Famiglia/ }).click()
+
+    const note = page.getByRole('note')
+    await expect(note).toContainText('Demo: la traduzione automatica non è attiva.')
+    await note.getByRole('button', { name: 'Chiudi avviso' }).click()
+    await expect(note).toHaveCount(0)
+
+    // Chiuso resta chiuso finché dura la demo…
+    await page.getByRole('link', { name: 'Indietro' }).click()
+    await page.getByRole('link', { name: /Famiglia/ }).click()
+    await expect(page.getByLabel('Messaggio')).toBeVisible()
+    await expect(note).toHaveCount(0)
+
+    // …e torna a una nuova apertura.
+    await page.getByRole('link', { name: 'Indietro' }).click()
+    await page.getByRole('button', { name: 'Esci dalla demo' }).click()
+    await page.getByRole('button', { name: 'Prova la demo' }).click()
+    await page.getByRole('link', { name: /Famiglia/ }).click()
+    await expect(note).toBeVisible()
+
+    await page.waitForTimeout(1_000)
+    expect(requests).toEqual([])
+  })
+
+  test('nell’app vera l’avviso della demo non compare', async ({ page }) => {
+    const email = env.E2E_EMAIL_A
+    const password = env.E2E_PASSWORD
+    const roomId = env.E2E_ROOM_ID
+    test.skip(!email || !password || !roomId, 'variabili E2E_* non impostate')
+
+    await page.goto('/login')
+    await page.getByLabel('Email').fill(email as string)
+    await page.getByLabel('Password').fill(password as string)
+    await page.getByRole('button', { name: 'Accedi' }).click()
+    await expect(page.getByRole('heading', { name: 'Le tue camere' })).toBeVisible()
+    await page.goto(`/rooms/${roomId}`)
+    await expect(page.getByLabel('Messaggio')).toBeVisible()
+    await page.waitForTimeout(1_000)
+    await expect(page.getByRole('note')).toHaveCount(0)
   })
 })
