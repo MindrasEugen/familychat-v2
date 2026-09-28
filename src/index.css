@@ -22,6 +22,8 @@
   --sage: #9cc2a5;
   --sage-bg: rgba(156, 194, 165, 0.14);
   --danger: #f08c7e;
+  /* Sfondo opaco tinto di --danger (18% su --bg), per avvisi da notare. */
+  --danger-bg: #412b27;
   --shadow: 0 18px 40px rgba(0, 0, 0, 0.45);
   --overlay: rgba(12, 9, 8, 0.94);
   --overlay-ink: #f4ebe5;
@@ -44,6 +46,8 @@
   --sage: #4d7d5a;
   --sage-bg: rgba(77, 125, 90, 0.12);
   --danger: #b8473a;
+  /* Sfondo opaco tinto di --danger (12% su --bg), per avvisi da notare. */
+  --danger-bg: #f3e0db;
   --shadow: 0 18px 40px rgba(90, 55, 35, 0.14);
   --overlay: rgba(28, 20, 16, 0.92);
   --overlay-ink: #f4ebe5;
@@ -1027,30 +1031,40 @@ input:-webkit-autofill:focus {
   font-size: 14px;
 }
 
-/* Demo: avviso sottile sulla traduzione, sopra la barra di scrittura */
+/* Demo: avviso sulla traduzione, sopra la barra di scrittura. Bordo e
+   sfondo rossi per distinguerlo; testo --text (contrasto oltre 11:1 in
+   entrambi i temi). */
 .demo-note {
   display: flex;
   align-items: flex-start;
-  gap: 8px;
+  gap: 6px;
   margin: 0 12px 6px;
-  padding: 8px 6px 8px 12px;
-  border: 1px solid var(--line);
+  padding: 8px 4px 8px 12px;
+  border: 1.5px solid var(--danger);
   border-radius: 12px;
-  background: var(--raised);
-  color: var(--muted);
-  font-size: 12.5px;
+  background: var(--danger-bg);
+  color: var(--text);
+  font-size: 13px;
   line-height: 1.4;
 }
 .demo-note p {
   flex: 1;
+  padding-top: 2px;
 }
+/* «×» con un'area di tocco di 36×36 px. */
 .demo-note .btn-link {
-  color: var(--muted);
-  padding: 2px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  margin: -6px 0;
+  padding: 0;
+  color: var(--text);
 }
 .demo-note svg {
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
 }
 
 /* ---------- Tour guidato (sandbox) ---------- */
