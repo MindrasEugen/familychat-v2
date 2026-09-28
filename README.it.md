@@ -4,7 +4,10 @@
 
 Una chat di famiglia in cui ognuno scrive nella sua lingua e legge nella propria: i messaggi vengono tradotti in automatico nella lingua del telefono di chi legge. Pensata per una famiglia sparsa tra più paesi (italiano, rumeno e altre lingue).
 
-<!-- TODO: aggiungere qui uno screenshot o una GIF dell'app. -->
+<p align="center">
+  <img src="docs/media/tour.gif" width="280" alt="Tour guidato, dalla schermata di benvenuto alla traduzione automatica">
+  <img src="docs/media/tour-traduzione.png" width="280" alt="Un messaggio in rumeno mostrato tradotto in italiano">
+</p>
 <!-- TODO: aggiungere qui il link "Prova la demo". -->
 
 ## Funzionalità

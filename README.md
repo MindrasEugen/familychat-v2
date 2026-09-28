@@ -4,7 +4,10 @@ English | [Italiano](README.it.md)
 
 A family chat where everyone writes in their own language and reads in theirs: messages are translated automatically into the language of the reader's phone. Built for a family spread across countries (Italian, Romanian and more).
 
-<!-- TODO: add a screenshot or GIF of the app here. -->
+<p align="center">
+  <img src="docs/media/tour.gif" width="280" alt="Guided tour, from the welcome screen to automatic translation (app shown in Italian)">
+  <img src="docs/media/tour-traduzione.png" width="280" alt="A Romanian message shown translated into Italian (app shown in Italian)">
+</p>
 <!-- TODO: add the "Try the demo" link here. -->
 
 ## Features
