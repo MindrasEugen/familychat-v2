@@ -84,3 +84,80 @@ for (const [name, close] of closers) {
     await expect(dialog).toBeHidden()
   })
 }
+
+// Richieste verso Supabase (REST, Auth, Storage, Functions) fatte dalla
+// pagina da quando si chiama start(). Il websocket realtime non passa di qui.
+function recordSupabaseRequests(page: Page) {
+  const origin = new URL(env.VITE_SUPABASE_URL as string).origin
+  const requests: string[] = []
+  let recording = false
+  page.on('request', (request) => {
+    if (recording && request.url().startsWith(origin)) requests.push(`${request.method()} ${request.url()}`)
+  })
+  return {
+    requests,
+    start: () => {
+      recording = true
+    },
+  }
+}
+
+async function stepThrough(page: Page) {
+  const dialog = page.getByRole('dialog')
+  while (!(await dialog.getByRole('button', { name: 'Inizia' }).isVisible())) {
+    await dialog.getByRole('button', { name: 'Avanti' }).click()
+  }
+  await dialog.getByRole('button', { name: 'Indietro' }).click()
+  await dialog.getByRole('button', { name: 'Avanti' }).click()
+}
+
+test('scorrere le schede del tutorial non fa richieste a Supabase; chiuderlo salva solo il profilo', async ({
+  page,
+}) => {
+  const profile = await api()
+  await profile.reset()
+
+  await login(page)
+  const dialog = page.getByRole('dialog', { name: 'Guida di benvenuto' })
+  await expect(dialog).toBeVisible()
+  await page.waitForLoadState('networkidle')
+
+  const recorder = recordSupabaseRequests(page)
+  recorder.start()
+  await stepThrough(page)
+  await page.waitForTimeout(1_000)
+  expect(recorder.requests).toEqual([])
+
+  await dialog.getByRole('button', { name: 'Inizia' }).click()
+  await expect.poll(profile.seenAt, { timeout: 10_000 }).not.toBeNull()
+  // Il salvataggio viene registrato: il registratore funziona, quindi le
+  // liste vuote qui sopra e nel test di Account non sono vuote per caso.
+  expect(recorder.requests.some((request) => request.startsWith('PATCH ') && request.includes('/rest/v1/AAA3_profiles'))).toBe(true)
+  expect(recorder.requests.filter((request) => !request.includes('/rest/v1/AAA3_profiles'))).toEqual([])
+})
+
+test('"Rivedi la guida" da Account non fa nessuna richiesta a Supabase', async ({ page }) => {
+  const profile = await api()
+  await profile.reset()
+  await login(page)
+  await page.getByRole('dialog', { name: 'Guida di benvenuto' }).getByRole('button', { name: 'Salta' }).click()
+  await expect.poll(profile.seenAt, { timeout: 10_000 }).not.toBeNull()
+  const seenAt = await profile.seenAt()
+
+  await page.goto('/account')
+  await expect(page.getByRole('heading', { name: 'Account' })).toBeVisible()
+  await page.waitForLoadState('networkidle')
+
+  const recorder = recordSupabaseRequests(page)
+  recorder.start()
+  await page.getByRole('button', { name: 'Rivedi la guida' }).click()
+  const dialog = page.getByRole('dialog', { name: 'Guida di benvenuto' })
+  await expect(dialog).toBeVisible()
+  await stepThrough(page)
+  await dialog.getByRole('button', { name: 'Inizia' }).click()
+  await expect(dialog).toBeHidden()
+  await page.waitForTimeout(1_000)
+
+  expect(recorder.requests).toEqual([])
+  expect(await profile.seenAt()).toBe(seenAt)
+})
