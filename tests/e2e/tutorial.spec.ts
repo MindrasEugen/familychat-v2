@@ -136,7 +136,10 @@ test('scorrere le schede del tutorial non fa richieste a Supabase; chiuderlo sal
   expect(recorder.requests.filter((request) => !request.includes('/rest/v1/AAA3_profiles'))).toEqual([])
 })
 
-test('"Rivedi la guida" da Account non fa nessuna richiesta a Supabase', async ({ page }) => {
+// Da Account "Rivedi la guida" apre il tour guidato nella sandbox (prima
+// riapriva le schede): finché è aperto non parte nessuna richiesta, e
+// tutorial_seen_at non cambia.
+test('"Rivedi la guida" da Account apre il tour nella sandbox senza richieste a Supabase', async ({ page }) => {
   const profile = await api()
   await profile.reset()
   await login(page)
@@ -151,13 +154,17 @@ test('"Rivedi la guida" da Account non fa nessuna richiesta a Supabase', async (
   const recorder = recordSupabaseRequests(page)
   recorder.start()
   await page.getByRole('button', { name: 'Rivedi la guida' }).click()
-  const dialog = page.getByRole('dialog', { name: 'Guida di benvenuto' })
-  await expect(dialog).toBeVisible()
-  await stepThrough(page)
-  await dialog.getByRole('button', { name: 'Inizia' }).click()
-  await expect(dialog).toBeHidden()
+  const tour = page.getByRole('dialog', { name: 'Tour di benvenuto' })
+  await tour.getByRole('button', { name: 'Avanti' }).click()
+  await page.getByRole('button', { name: 'Crea account' }).click()
+  await expect(tour.getByRole('heading', { name: 'Il tuo profilo' })).toBeVisible()
+  await page.getByRole('button', { name: 'Continua' }).click()
+  await expect(tour.getByRole('heading', { name: 'Crea una camera' })).toBeVisible()
   await page.waitForTimeout(1_000)
-
+  // Solo fin qui: chiudendo, l'app vera si rimonta e ricarica i suoi dati.
   expect(recorder.requests).toEqual([])
+
+  await tour.getByRole('button', { name: 'Salta' }).click()
+  await expect(page.getByRole('heading', { name: 'Account' })).toBeVisible()
   expect(await profile.seenAt()).toBe(seenAt)
 })

@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { PostgrestError } from '@supabase/supabase-js'
 import { useDataApi } from '../../lib/dataApi'
 import type { Database } from '../../lib/database.types'
+import { tourSeenAt } from '../tour/tourSeen'
 
 type Profile = Database['public']['Tables']['AAA3_profiles']['Row']
 
@@ -26,7 +27,9 @@ export function useCompleteProfile(userId: string | undefined) {
   return useMutation<Profile, PostgrestError | Error, { username: string; avatarFile: File | null }>({
     mutationFn: async ({ username, avatarFile }) => {
       if (!userId) throw new Error('Nessun utente autenticato.')
-      return api.createProfile(userId, username, avatarFile, null)
+      // Tour già visto prima di registrarsi: la guida non riparte, nemmeno
+      // sugli altri dispositivi (nella sandbox il valore viene ignorato).
+      return api.createProfile(userId, username, avatarFile, tourSeenAt())
     },
     onSuccess: (data) => {
       queryClient.setQueryData(profileQueryKey(userId), data)

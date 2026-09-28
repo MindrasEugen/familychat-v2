@@ -35,30 +35,60 @@ function recordSupabaseRequests(page: Page) {
 test('il tour parte al primo accesso e arriva alla registrazione vera senza richieste a Supabase', async ({ page }) => {
   const requests = recordSupabaseRequests(page)
   await page.goto('/login')
-
   const tour = page.getByRole('dialog', { name: 'Tour di benvenuto' })
-  await expect(tour.getByRole('heading', { name: 'Benvenuto in Chat Famiglia' })).toBeVisible()
-  await page.screenshot({ path: 'test-results/tour-1.png' })
+  const step = (title: string) => expect(tour.getByRole('heading', { name: title })).toBeVisible()
+
+  await step('Benvenuto in Chat Famiglia')
   await tour.getByRole('button', { name: 'Avanti' }).click()
 
-  await expect(tour.getByRole('heading', { name: 'Crea il tuo account' })).toBeVisible()
+  await step('Crea il tuo account')
   await expect(page.getByLabel('Email')).toHaveValue('anna@esempio.it')
-  await page.screenshot({ path: 'test-results/tour-2.png' })
   await page.getByRole('button', { name: 'Crea account' }).click()
 
-  await expect(tour.getByRole('heading', { name: 'Il tuo profilo' })).toBeVisible()
-  await page.screenshot({ path: 'test-results/tour-3.png' })
+  await step('Il tuo profilo')
   await page.getByRole('button', { name: 'Continua' }).click()
 
-  await expect(tour.getByRole('heading', { name: 'Ora tocca a te' })).toBeVisible()
-  await page.screenshot({ path: 'test-results/tour-4.png' })
+  await step('Crea una camera')
+  await page.getByLabel('Nuova camera').fill('Cugini')
+  await page.getByRole('button', { name: 'Crea camera' }).click()
+
+  await step('Invita qualcuno')
+  await page.getByRole('button', { name: 'Genera nuovo invito' }).click()
+  await expect(page.getByRole('status')).toContainText('Nuovo codice')
+  await tour.getByRole('button', { name: 'Avanti' }).click()
+
+  await step('Scrivi un messaggio')
+  await page.getByLabel('Messaggio').fill('Ci sono anch’io!')
+  await page.getByRole('button', { name: 'Invia' }).click()
+
+  await step('Traduzione automatica')
+  await expect(page.getByText("Vengo anch'io! Porto il dolce.")).toBeVisible()
+  await tour.getByRole('button', { name: 'Avanti' }).click()
+
+  await step('Cancellare un messaggio')
+  await page.getByRole('button', { name: 'Elimina' }).click()
+
+  await step('Ora tocca a te')
   await tour.getByRole('button', { name: 'Crea il tuo account' }).click()
 
   await expect(page.getByRole('heading', { name: 'Registrati' })).toBeVisible()
   await page.waitForTimeout(1_000)
   expect(requests).toEqual([])
 
+  // Tour segnato come visto: ricaricando non riparte.
   await page.reload()
   await expect(page.getByRole('heading', { name: 'Accedi' })).toBeVisible()
   await expect(tour).toBeHidden()
+})
+
+test('"Salta" chiude il tour e lo segna come visto', async ({ page }) => {
+  const requests = recordSupabaseRequests(page)
+  await page.goto('/login')
+  const tour = page.getByRole('dialog', { name: 'Tour di benvenuto' })
+  await tour.getByRole('button', { name: 'Salta' }).click()
+  await expect(page.getByRole('heading', { name: 'Accedi' })).toBeVisible()
+  await page.reload()
+  await expect(page.getByRole('heading', { name: 'Accedi' })).toBeVisible()
+  await expect(tour).toBeHidden()
+  expect(requests).toEqual([])
 })

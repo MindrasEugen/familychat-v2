@@ -139,7 +139,7 @@ export function RoomInfoPage() {
           {removeMember.isError && <p role="alert">{removeMember.error.message}</p>}
         </div>
 
-        <div className="card">
+        <div className="card" data-tour="invites">
           <span className="section-label">Inviti attivi</span>
           {roomId && <InviteList roomId={roomId} />}
           <button

@@ -11,6 +11,19 @@ export function isTourSeen(): boolean {
   }
 }
 
+// Quando è stato visto, da salvare in tutorial_seen_at alla creazione del
+// profilo; null se mai visto (o saltato) su questo dispositivo.
+export function tourSeenAt(): string | null {
+  try {
+    const value = localStorage.getItem(TOUR_SEEN_KEY)
+    if (value === null) return null
+    const date = new Date(value)
+    return Number.isNaN(date.getTime()) ? new Date().toISOString() : date.toISOString()
+  } catch {
+    return null
+  }
+}
+
 export function markTourSeen() {
   try {
     localStorage.setItem(TOUR_SEEN_KEY, new Date().toISOString())

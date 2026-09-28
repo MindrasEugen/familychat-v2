@@ -88,7 +88,7 @@ function MessageBody({ body, currentUserId }: { body: string; currentUserId: str
 
   return (
     <>
-      <p>{isTranslated ? translated : body}</p>
+      <p data-tour={isTranslated ? 'translated' : undefined}>{isTranslated ? translated : body}</p>
       {/* sourceLang "und": solo emoji/punteggiatura, niente da correggere. */}
       {translationQuery.data && translationQuery.data.sourceLang !== 'und' && !isCorrecting && (
         // Pillola verde solo se il testo è davvero tradotto; altrimenti
@@ -165,6 +165,7 @@ export function MessageList({
                   <button
                     type="button"
                     className="btn-link"
+                    data-tour={isMine ? 'delete-message' : undefined}
                     onClick={() =>
                       deleteMessage.mutate({
                         id: message.id,

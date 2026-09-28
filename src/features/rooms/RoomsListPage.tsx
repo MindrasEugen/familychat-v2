@@ -119,7 +119,7 @@ export function RoomsListPage() {
 
         <span className="section-label">Aggiungi</span>
 
-        <form onSubmit={handleCreateRoom} className="card">
+        <form onSubmit={handleCreateRoom} className="card" data-tour="create-room">
           <div className="inline-form">
             <label className="field">
               Nuova camera

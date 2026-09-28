@@ -4,6 +4,9 @@ const PADDING = 6
 const GAP = 12
 // Spazio che basta al riquadro del testo sotto l'elemento (dove si legge meglio).
 const BOX_ROOM = 240
+// Oltre questo tempo senza l'elemento (es. nessun messaggio tradotto nella
+// lingua del telefono) il riquadro compare comunque, al centro.
+const MISSING_TARGET_MS = 1500
 
 // Posizione dell'elemento da evidenziare, ricalcolata a ogni fotogramma:
 // gli elementi compaiono dopo il caricamento dei dati e si spostano con lo
@@ -14,9 +17,10 @@ function useTargetRect(target: string | undefined) {
   useEffect(() => {
     setRect(null)
     if (!target) return
+    const selector = target
     let scrolled = false
     function measure() {
-      const element = document.querySelector(`[data-tour="${target}"]`)
+      const element = document.querySelector(selector)
       if (!element) return setRect(null)
       if (!scrolled) {
         element.scrollIntoView({ block: 'center' })
@@ -43,8 +47,15 @@ function useTargetRect(target: string | undefined) {
 // cliccabile (lì si fa l'azione richiesta), il resto dello schermo no. Il
 // riquadro del testo va sopra o sotto l'elemento, dove c'è più spazio, così
 // su telefono non lo copre mai.
+// target: selettore CSS dell'elemento da evidenziare (nessuno = riquadro al centro).
 export function TourOverlay({ target, label, children }: { target?: string; label: string; children: ReactNode }) {
   const rect = useTargetRect(target)
+  const [missingFor, setMissingFor] = useState<string | null>(null)
+  useEffect(() => {
+    if (!target) return
+    const timer = setTimeout(() => setMissingFor(target), MISSING_TARGET_MS)
+    return () => clearTimeout(timer)
+  }, [target])
   const viewportHeight = window.innerHeight
   const viewportWidth = window.innerWidth
 
@@ -82,7 +93,7 @@ export function TourOverlay({ target, label, children }: { target?: string; labe
       )}
       {/* Finché l'elemento del passo non è sullo schermo, niente riquadro:
           al centro rischierebbe di coprirlo proprio quando compare. */}
-      {(!target || hole) && (
+      {(!target || hole || missingFor === target) && (
         <div className="tour-box" role="dialog" aria-label={label} style={boxStyle}>
           {children}
         </div>

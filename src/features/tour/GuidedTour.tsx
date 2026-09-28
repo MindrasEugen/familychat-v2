@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useStore } from 'zustand'
 import type { Sandbox } from '../sandbox/sandboxContext'
-import { closeSandbox } from '../sandbox/sandboxMode'
+import { closeSandbox, useSandboxMode } from '../sandbox/sandboxMode'
 import { markTourSeen } from './tourSeen'
 import { isLastStep, isStepDone, TOUR_STEPS } from './tourSteps'
 import { TourOverlay } from './TourOverlay'
@@ -12,6 +12,7 @@ import { TourOverlay } from './TourOverlay'
 // l'azione risulta fatta. "Salta" e la fine segnano il tour come visto.
 export function GuidedTour({ sandbox }: { sandbox: Sandbox }) {
   const [index, setIndex] = useState(0)
+  const review = useSandboxMode((mode) => mode.review)
   const navigate = useNavigate()
   const state = useStore(sandbox.store)
   const step = TOUR_STEPS[index]
@@ -31,11 +32,12 @@ export function GuidedTour({ sandbox }: { sandbox: Sandbox }) {
     navigate(step.path(state))
   }, [pathFor, index, navigate, step, state])
 
+  const autoAdvance = step.autoAdvance ?? true
   useEffect(() => {
-    if (!waitsForAction || !done || isLastStep(index)) return
+    if (!waitsForAction || !done || !autoAdvance || isLastStep(index)) return
     const timer = setTimeout(() => setIndex(index + 1), 400)
     return () => clearTimeout(timer)
-  }, [waitsForAction, done, index])
+  }, [waitsForAction, done, autoAdvance, index])
 
   function finish({ toSignup }: { toSignup: boolean }) {
     markTourSeen()
@@ -54,8 +56,8 @@ export function GuidedTour({ sandbox }: { sandbox: Sandbox }) {
           </button>
         )}
       </div>
-      <h2>{step.title}</h2>
-      <p>{step.body}</p>
+      <h2>{review && isLastStep(index) ? 'Tutto chiaro' : step.title}</h2>
+      <p>{review && isLastStep(index) ? 'Ora sai come funziona. Torna all’app per ritrovare le tue camere.' : step.body}</p>
       <div className="tour-actions">
         {index > 0 && !isLastStep(index) && (
           <button type="button" className="btn-ghost" onClick={() => setIndex(index - 1)}>
@@ -63,11 +65,11 @@ export function GuidedTour({ sandbox }: { sandbox: Sandbox }) {
           </button>
         )}
         {isLastStep(index) ? (
-          <button type="button" onClick={() => finish({ toSignup: true })}>
-            Crea il tuo account
+          <button type="button" onClick={() => finish({ toSignup: !review })}>
+            {review ? 'Torna all’app' : 'Crea il tuo account'}
           </button>
         ) : (
-          !waitsForAction && (
+          (!waitsForAction || (done && !autoAdvance)) && (
             <button type="button" onClick={() => setIndex(index + 1)}>
               Avanti
             </button>

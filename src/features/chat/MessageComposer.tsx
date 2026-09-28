@@ -74,7 +74,7 @@ export function MessageComposer({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="composer">
+    <form onSubmit={handleSubmit} className="composer" data-tour="composer">
       {tooManyMessage && <p role="alert">{tooManyMessage}</p>}
       {sendMessage.isError && <p role="alert">{sendMessage.error.message}</p>}
       {previewUrls.length > 0 && (
