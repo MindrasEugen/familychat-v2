@@ -125,6 +125,36 @@ test('dopo il tour, la registrazione vera salva tutorial_seen_at e la guida a sc
   expect(profile?.tutorial_seen_at).not.toBeNull()
 })
 
+// Chi ha già un account e apre l'app da un dispositivo nuovo: vede il tour
+// (non si può sapere prima dell'accesso), poi accede, e la guida a schede
+// non compare più; tutorial_seen_at viene scritto nel profilo.
+test('account esistente su un dispositivo nuovo: dopo il tour la guida a schede non compare', async ({ page }) => {
+  const email = env.E2E_EMAIL_C
+  const password = env.E2E_PASSWORD
+  test.skip(!email || !password, 'variabili E2E_* non impostate')
+
+  const client = createClient(env.VITE_SUPABASE_URL as string, env.VITE_SUPABASE_ANON_KEY as string, {
+    auth: { persistSession: false },
+  })
+  const { data: auth, error } = await client.auth.signInWithPassword({ email: email as string, password: password as string })
+  if (error) throw error
+  const seenAt = async () =>
+    (await client.from('AAA3_profiles').select('tutorial_seen_at').eq('id', auth.user.id).single()).data?.tutorial_seen_at ?? null
+  const { error: resetError } = await client.from('AAA3_profiles').update({ tutorial_seen_at: null }).eq('id', auth.user.id)
+  if (resetError) throw resetError
+
+  await page.goto('/login')
+  await page.getByRole('dialog', { name: 'Tour di benvenuto' }).getByRole('button', { name: 'Salta' }).click()
+  await page.getByLabel('Email').fill(email as string)
+  await page.getByLabel('Password').fill(password as string)
+  await page.getByRole('button', { name: 'Accedi' }).click()
+  await expect(page.getByRole('heading', { name: 'Le tue camere' })).toBeVisible()
+
+  await expect.poll(seenAt, { timeout: 10_000 }).not.toBeNull()
+  await page.waitForTimeout(1_000)
+  await expect(page.getByRole('dialog', { name: 'Guida di benvenuto' })).toBeHidden()
+})
+
 test.describe('demo libera', () => {
   // Tour già visto: si arriva alla pagina di accesso e si sceglie la demo.
   test.use({

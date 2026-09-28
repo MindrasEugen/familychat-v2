@@ -10,7 +10,29 @@ const email = env.E2E_EMAIL_C
 const password = env.E2E_PASSWORD
 
 test.skip(!email || !password, 'variabili E2E_* non impostate')
-test.use({ locale: 'it-IT' })
+// Dispositivo che conosce già un account (quindi il tour non parte da solo)
+// e non ha mai visto il tour: dopo il login la guida a schede compare come
+// prima. Con il tour già visto invece non compare (vedi tour.spec.ts).
+test.use({
+  locale: 'it-IT',
+  storageState: {
+    cookies: [],
+    origins: [
+      {
+        origin: 'http://localhost:5173',
+        localStorage: [
+          {
+            name: 'familychat.accounts.v1',
+            value: JSON.stringify({
+              accounts: [{ slot: 'account-1', userId: 'dispositivo-gia-usato', username: null, avatarUrl: null }],
+              activeSlot: 'account-1',
+            }),
+          },
+        ],
+      },
+    ],
+  },
+})
 
 function readEnvFile(path: string): Record<string, string> {
   if (!fs.existsSync(path)) return {}

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ComponentType, type SVGProps } from 'react'
+import { isTourSeen } from '../tour/tourSeen'
 import { BellIcon, CameraIcon, ChatIcon, TranslateIcon, UserIcon } from '../../components/icons'
 import { useAuthStatus } from '../auth/useAuthStatus'
 import { useMarkTutorialSeen } from '../auth/useProfile'
@@ -101,7 +102,17 @@ export function WelcomeTutorial() {
   // apertura dell'app, non subito sopra quello che si sta facendo.
   const [dismissed, setDismissed] = useState(false)
 
-  if (status !== 'authenticated' || !profile || profile.tutorial_seen_at || dismissed) return null
+  // Tour già visto (o saltato) su questo dispositivo prima di accedere: chi
+  // ha già un account e apre l'app da un dispositivo nuovo non deve vedere
+  // anche le schede. Si segna la guida come vista, così non ricompare
+  // nemmeno sugli altri dispositivi.
+  const skipForTour = status === 'authenticated' && Boolean(profile) && !profile?.tutorial_seen_at && isTourSeen()
+  const { mutate: markSeenNow } = markSeen
+  useEffect(() => {
+    if (skipForTour) markSeenNow()
+  }, [skipForTour, markSeenNow])
+
+  if (status !== 'authenticated' || !profile || profile.tutorial_seen_at || dismissed || skipForTour) return null
 
   return (
     <TutorialDialog
