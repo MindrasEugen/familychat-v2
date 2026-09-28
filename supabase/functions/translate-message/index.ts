@@ -33,7 +33,7 @@
 // restano comunque in vigore per qualunque ruolo, è lì che vivono le garanzie
 // vere (vedi migrazione), non in questo codice.
 
-import { createClient } from "jsr:@supabase/supabase-js@2";
+import { createClient, type SupabaseClient } from "jsr:@supabase/supabase-js@2";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -70,14 +70,76 @@ interface TranslationResult {
   provider: "google" | "azure" | "mistral";
 }
 
+// Soglia gratuita Google: 500.000 caratteri/mese. Ci si ferma a 450.000 per
+// margine (il conteggio è per mese UTC, quello di Google può non coincidere
+// al giorno esatto, e text.length conta unità UTF-16, non caratteri Google).
+const GOOGLE_MONTHLY_CHAR_LIMIT = 450_000;
+
+interface ProviderUsage {
+  chars: number;
+  exhausted: boolean;
+}
+
+// Primo giorno del mese UTC, nello stesso formato della colonna "month"
+// calcolata in SQL da increment_translation_usage / mark_translation_provider_exhausted.
+function currentMonth(): string {
+  const now = new Date();
+  return `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}-01`;
+}
+
+// Legge il contatore del mese (AAA3_translation_usage). Nessuna riga =
+// niente usato finora. Ritorna null se la lettura fallisce: un problema del
+// contatore non deve mai bloccare la traduzione, il chiamante prosegue.
+async function readUsage(supabase: SupabaseClient, provider: string): Promise<ProviderUsage | null> {
+  try {
+    const { data, error } = await supabase
+      .from("AAA3_translation_usage")
+      .select("chars, exhausted")
+      .eq("provider", provider)
+      .eq("month", currentMonth())
+      .maybeSingle();
+    if (error) {
+      console.error(`translate-message: ${provider} usage read failed (non-fatal)`, error);
+      return null;
+    }
+    return { chars: Number(data?.chars ?? 0), exhausted: data?.exhausted ?? false };
+  } catch (err) {
+    console.error(`translate-message: ${provider} usage read failed (non-fatal)`, err);
+    return null;
+  }
+}
+
+async function callUsageRpc(supabase: SupabaseClient, fn: string, args: Record<string, unknown>) {
+  try {
+    const { error } = await supabase.rpc(fn, args);
+    if (error) console.error(`translate-message: ${fn} failed (non-fatal)`, error);
+  } catch (err) {
+    console.error(`translate-message: ${fn} failed (non-fatal)`, err);
+  }
+}
+
 // Google Cloud Translation v2 (REST, chiave API semplice — non richiede
 // service account/OAuth). Ritorna null (mai lancia) su qualunque errore:
 // quota esaurita, fatturazione disattivata, account chiuso, chiave
 // assente/non valida, rete — in ogni caso il chiamante deve solo passare al
 // fallback Mistral, non fallire la richiesta.
-async function translateWithGoogle(text: string, targetLang: string): Promise<TranslationResult | null> {
+// Oltre la soglia gratuita Google non dà errore ma addebita: per questo il
+// contatore mensile, che lo fa saltare prima di superarla.
+async function translateWithGoogle(
+  supabase: SupabaseClient,
+  text: string,
+  targetLang: string,
+): Promise<TranslationResult | null> {
   const apiKey = Deno.env.get("GOOGLE_TRANSLATE_API_KEY");
   if (!apiKey) return null;
+
+  const usage = await readUsage(supabase, "google");
+  if (usage && usage.chars + text.length > GOOGLE_MONTHLY_CHAR_LIMIT) {
+    console.warn(
+      `translate-message: Google monthly limit reached (${usage.chars} + ${text.length} > ${GOOGLE_MONTHLY_CHAR_LIMIT}), falling back to Mistral`,
+    );
+    return null;
+  }
 
   try {
     const response = await fetch(
@@ -99,6 +161,8 @@ async function translateWithGoogle(text: string, targetLang: string): Promise<Tr
     const translation = result?.data?.translations?.[0];
     if (!translation?.translatedText) return null;
 
+    await callUsageRpc(supabase, "increment_translation_usage", { p_provider: "google", p_chars: text.length });
+
     return {
       translatedText: translation.translatedText,
       sourceLang: translation.detectedSourceLanguage ?? "auto",
@@ -114,9 +178,18 @@ async function translateWithGoogle(text: string, targetLang: string): Promise<Tr
 // della lingua sorgente, stessa filosofia di Google). Come per Google, non
 // lancia mai: qualunque errore (chiave assente/non valida, quota esaurita,
 // rete) passa semplicemente al livello successivo.
-async function translateWithAzure(text: string, targetLang: string): Promise<TranslationResult | null> {
+// Un 403 (quota F0 esaurita) viene ricordato in AAA3_translation_usage fino a
+// inizio mese, così Azure non viene ritentato a ogni messaggio.
+async function translateWithAzure(
+  supabase: SupabaseClient,
+  text: string,
+  targetLang: string,
+): Promise<TranslationResult | null> {
   const apiKey = Deno.env.get("AZURE_TRANSLATOR_KEY");
   if (!apiKey) return null;
+
+  const usage = await readUsage(supabase, "azure");
+  if (usage?.exhausted) return null;
 
   // Richiesta solo per risorse Translator "regionali/multi-servizio" — una
   // risorsa "globale" (quella raccomandata da Microsoft per un progetto
@@ -142,6 +215,9 @@ async function translateWithAzure(text: string, targetLang: string): Promise<Tra
     if (!response.ok) {
       const detail = await response.text();
       console.error(`translate-message: Azure ${response.status}, falling back to Google`, detail);
+      if (response.status === 403) {
+        await callUsageRpc(supabase, "mark_translation_provider_exhausted", { p_provider: "azure" });
+      }
       return null;
     }
 
@@ -294,8 +370,8 @@ Deno.serve(async (req: Request) => {
   }
 
   const result =
-    (await translateWithAzure(text, targetLang)) ??
-    (await translateWithGoogle(text, targetLang)) ??
+    (await translateWithAzure(supabase, text, targetLang)) ??
+    (await translateWithGoogle(supabase, text, targetLang)) ??
     (await translateWithMistral(text, targetLang));
 
   if (!result) {
