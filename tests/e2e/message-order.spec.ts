@@ -106,3 +106,49 @@ test('due messaggi con lo stesso orario: stesso ordine (created_at, poi id) in a
   await page.reload()
   await expect.poll(() => pageBodies(page, runId), { timeout: 30_000 }).toEqual(expected)
 })
+
+// "Carica messaggi precedenti" quando il bordo tra due pagine cade in mezzo
+// a messaggi con lo stesso orario: 99 messaggi con orari diversi e, più
+// vecchi di tutti, 3 con lo stesso orario. La prima pagina (100) ne prende
+// uno solo; la successiva deve portare gli altri due, senza saltarne e senza
+// doppioni. Camera creata apposta e poi eliminata.
+test('pagina precedente con messaggi allo stesso orario sul bordo: nessuno saltato né doppio', async ({ page }) => {
+  const runId = newRunId()
+  const owner = await apiClient(env.E2E_EMAIL_A as string)
+  const { data: room, error: roomError } = await owner.client.rpc('create_room', { room_name: `ordine ${runId}` })
+  if (roomError) throw roomError
+
+  try {
+    const base = Date.now() - 60 * 60_000
+    const tiedAt = new Date(base).toISOString()
+    // Stesso orario, id in ordine crescente: 001, 002, 003.
+    const tied = ['1', '5', '9'].map((first, index) => ({
+      id: uuidStartingWith(first),
+      created_at: tiedAt,
+      body: `${runId} ${String(index + 1).padStart(3, '0')}`,
+    }))
+    const distinct = Array.from({ length: 99 }, (_, index) => ({
+      id: crypto.randomUUID(),
+      created_at: new Date(base + (index + 1) * 1000).toISOString(),
+      body: `${runId} ${String(index + 4).padStart(3, '0')}`,
+    }))
+    const { error } = await owner.client
+      .from('AAA3_chat_messages')
+      .insert([...tied, ...distinct].map((row) => ({ ...row, room_id: room.id, sender_id: owner.userId })))
+    if (error) throw error
+
+    const expected = Array.from({ length: 102 }, (_, index) => `${runId} ${String(index + 1).padStart(3, '0')}`)
+    expect(await dbBodies(owner.client, room.id, runId)).toEqual(expected)
+
+    await openRoom(page, env.E2E_EMAIL_A as string, room.id)
+    // Prima pagina: gli ultimi 100, cioè dal terzo dei messaggi con lo
+    // stesso orario in poi.
+    await expect.poll(() => pageBodies(page, runId), { timeout: 30_000 }).toEqual(expected.slice(2))
+
+    await page.getByRole('button', { name: 'Carica messaggi precedenti' }).click()
+    await expect.poll(() => pageBodies(page, runId), { timeout: 30_000 }).toEqual(expected)
+    await expect(page.getByText('Inizio della cronologia.')).toBeVisible()
+  } finally {
+    await owner.client.from('AAA3_rooms').delete().eq('id', room.id)
+  }
+})

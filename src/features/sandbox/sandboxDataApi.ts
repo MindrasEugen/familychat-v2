@@ -2,6 +2,7 @@ import type { Session } from '@supabase/supabase-js'
 import { createStore } from 'zustand/vanilla'
 import type { Database } from '../../lib/database.types'
 import type { CorrectTranslationInput, DataApi, RoomOverview, TranslationResult } from '../../lib/supabaseDataApi'
+import { compareMessages } from '../chat/messageOrder'
 import { getTourTexts } from '../tutorial/tutorialTexts'
 
 // Sorgente dati del tour e della demo: stessa forma di supabaseDataApi, ma
@@ -246,7 +247,9 @@ export function createSandboxDataApi(store: SandboxStore): DataApi {
     },
 
     async getMessages(roomId, before) {
-      return get().messages.filter((message) => message.room_id === roomId && (!before || message.created_at < before))
+      return get()
+        .messages.filter((message) => message.room_id === roomId && (!before || compareMessages(message, before) < 0))
+        .sort(compareMessages)
     },
 
     async sendMessage(roomId, userId, body, imageFiles) {

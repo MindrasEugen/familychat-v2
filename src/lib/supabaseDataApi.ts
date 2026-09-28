@@ -205,12 +205,17 @@ export const supabaseDataApi = {
 
   // --- Messaggi ---
 
-  // Ultima pagina di messaggi (o quella prima di `before`), in ordine
-  // cronologico. A parità di created_at decide l'id, come nell'app
-  // (features/chat/messageOrder.ts).
-  async getMessages(roomId: string, before?: string): Promise<Message[]> {
+  // Ultima pagina di messaggi (o quella prima del messaggio `before`), in
+  // ordine cronologico. A parità di created_at decide l'id, come nell'app
+  // (features/chat/messageOrder.ts). La pagina precedente si prende sulla
+  // coppia (created_at, id): con il solo created_at, un messaggio con lo
+  // stesso orario del più vecchio già caricato verrebbe saltato.
+  async getMessages(roomId: string, before?: Pick<Message, 'created_at' | 'id'>): Promise<Message[]> {
     let query = supabase.from('AAA3_chat_messages').select('*').eq('room_id', roomId)
-    if (before) query = query.lt('created_at', before)
+    if (before) {
+      const at = before.created_at
+      query = query.or(`created_at.lt."${at}",and(created_at.eq."${at}",id.lt.${before.id})`)
+    }
     const { data, error } = await query
       .order('created_at', { ascending: false })
       .order('id', { ascending: false })

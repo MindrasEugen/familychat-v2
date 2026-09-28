@@ -56,7 +56,7 @@ export function useLoadOlderMessages(roomId: string | undefined) {
       const oldest = current[0]
       if (!oldest) return 0
 
-      const fetched = await api.getMessages(roomId, oldest.created_at)
+      const fetched = await api.getMessages(roomId, oldest)
       queryClient.setQueryData<Message[]>(messagesQueryKey(roomId), (old) =>
         mergeMessages(old ?? [], fetched),
       )
