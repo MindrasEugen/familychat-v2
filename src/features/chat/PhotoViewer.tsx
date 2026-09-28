@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { BackIcon, CloseIcon, ForwardIcon } from '../../components/icons'
+import { useDataApi } from '../../lib/dataApi'
 import { downloadPhoto, usePhotoUrl } from './photoUrls'
 
 function ViewerImage({ imagePath }: { imagePath: string }) {
@@ -22,6 +23,7 @@ export function PhotoViewer({
   startIndex: number
   onClose: () => void
 }) {
+  const api = useDataApi()
   const dialogRef = useRef<HTMLDialogElement>(null)
   const [index, setIndex] = useState(startIndex)
   const [isDownloading, setIsDownloading] = useState(false)
@@ -51,7 +53,7 @@ export function PhotoViewer({
     setIsDownloading(true)
     setDownloadFailed(false)
     try {
-      await downloadPhoto(currentPath)
+      await downloadPhoto(api, currentPath)
     } catch {
       setDownloadFailed(true)
     } finally {

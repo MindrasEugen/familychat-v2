@@ -1,21 +1,16 @@
 import { useEffect } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { PostgrestError } from '@supabase/supabase-js'
+import { useDataApi } from '../../lib/dataApi'
 import { supabase } from '../../lib/supabaseClient'
 import type { Database } from '../../lib/database.types'
-import { compressImage } from '../../lib/imageCompression'
+import { MESSAGES_PAGE_SIZE } from '../../lib/supabaseDataApi'
 
-const PHOTO_BUCKET = 'room-photos'
-export const MESSAGES_PAGE_SIZE = 100
+export { MESSAGES_PAGE_SIZE }
 // Tetto lato client (oltre al vincolo DB "AAA3_chat_messages_image_paths_max_10"),
 // scelto esplicitamente dall'utente — evita di far partire fino a 10 upload
 // per poi scoprire il rifiuto solo all'insert finale.
 export const MAX_PHOTOS_PER_MESSAGE = 10
-
-function fileExtension(file: File): string {
-  const match = /\.([a-zA-Z0-9]+)$/.exec(file.name)
-  return match ? match[1].toLowerCase() : 'bin'
-}
 
 type Message = Database['public']['Tables']['AAA3_chat_messages']['Row']
 
@@ -37,20 +32,12 @@ function mergeMessages(existing: Message[], incoming: Message[]): Message[] {
 
 export function useMessages(roomId: string | undefined) {
   const queryClient = useQueryClient()
+  const api = useDataApi()
 
   return useQuery({
     queryKey: messagesQueryKey(roomId),
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('AAA3_chat_messages')
-        .select('*')
-        .eq('room_id', roomId as string)
-        .order('created_at', { ascending: false })
-        .limit(MESSAGES_PAGE_SIZE)
-
-      if (error) throw error
-
-      const fetched = [...data].reverse()
+      const fetched = await api.getMessages(roomId as string)
       // Merge sul risultato già in cache invece di sostituirlo: se un
       // messaggio realtime è arrivato mentre questo fetch era in volo,
       // resta comunque nella lista finale invece di sparire quando il
@@ -70,6 +57,7 @@ export function useMessages(roomId: string | undefined) {
 // finita (meno di una pagina piena = non ce ne sono altri prima).
 export function useLoadOlderMessages(roomId: string | undefined) {
   const queryClient = useQueryClient()
+  const api = useDataApi()
 
   return useMutation<number, PostgrestError | Error, void>({
     mutationFn: async () => {
@@ -79,17 +67,7 @@ export function useLoadOlderMessages(roomId: string | undefined) {
       const oldest = current[0]
       if (!oldest) return 0
 
-      const { data, error } = await supabase
-        .from('AAA3_chat_messages')
-        .select('*')
-        .eq('room_id', roomId)
-        .lt('created_at', oldest.created_at)
-        .order('created_at', { ascending: false })
-        .limit(MESSAGES_PAGE_SIZE)
-
-      if (error) throw error
-
-      const fetched = [...data].reverse()
+      const fetched = await api.getMessages(roomId, oldest.created_at)
       queryClient.setQueryData<Message[]>(messagesQueryKey(roomId), (old) =>
         mergeMessages(old ?? [], fetched),
       )
@@ -124,9 +102,10 @@ export function useLoadOlderMessages(roomId: string | undefined) {
 // tests/e2e/lesson10.spec.ts). Il fetch fa merge per id, quindi è innocuo.
 export function useRoomMessagesRealtime(roomId: string | undefined) {
   const queryClient = useQueryClient()
+  const { sandbox } = useDataApi()
 
   useEffect(() => {
-    if (!roomId) return
+    if (!roomId || sandbox) return
 
     function createChannel() {
       return supabase
@@ -175,46 +154,17 @@ export function useRoomMessagesRealtime(roomId: string | undefined) {
       window.removeEventListener('online', recoverIfDead)
       supabase.removeChannel(channel)
     }
-  }, [roomId, queryClient])
-}
-
-async function uploadMessagePhoto(roomId: string, file: File): Promise<string> {
-  // Se la compressione fallisce su tutte le strategie, carichiamo il file
-  // originale così com'è invece di bloccare l'invio (lezione 5): il
-  // messaggio deve arrivare comunque.
-  const compressed = await compressImage(file)
-  const toUpload = compressed ?? file
-  const ext = compressed ? 'jpg' : fileExtension(file)
-  const contentType = compressed ? 'image/jpeg' : file.type || 'application/octet-stream'
-  // Path "<room_id>/<file>": le policy RLS sul bucket leggono il primo
-  // segmento come room_id per verificare l'appartenenza alla camera.
-  const path = `${roomId}/${crypto.randomUUID()}.${ext}`
-  const { error: uploadError } = await supabase.storage.from(PHOTO_BUCKET).upload(path, toUpload, { contentType })
-  if (uploadError) throw uploadError
-  return path
+  }, [roomId, sandbox, queryClient])
 }
 
 export function useSendMessage(roomId: string | undefined, userId: string | undefined) {
   const queryClient = useQueryClient()
+  const api = useDataApi()
 
   return useMutation<Message, PostgrestError | Error, { body: string; imageFiles: File[] }>({
     mutationFn: async ({ body, imageFiles }) => {
       if (!roomId || !userId) throw new Error('Camera o utente non disponibili.')
-
-      // Compressione + upload in parallelo, non in sequenza: con fino a 10
-      // foto (alcune potenzialmente HEIC, cascata di compressione più lenta)
-      // un upload sequenziale sarebbe percepibilmente lento senza motivo,
-      // ogni file è indipendente dagli altri.
-      const imagePaths = await Promise.all(imageFiles.map((file) => uploadMessagePhoto(roomId, file)))
-
-      const { data, error } = await supabase
-        .from('AAA3_chat_messages')
-        .insert({ room_id: roomId, sender_id: userId, body: body.trim() || null, image_paths: imagePaths })
-        .select()
-        .single()
-
-      if (error) throw error
-      return data
+      return api.sendMessage(roomId, userId, body, imageFiles)
     },
     onSuccess: (message) => {
       // Merge immediato per reattività — arriverà comunque anche via
@@ -228,21 +178,12 @@ export function useSendMessage(roomId: string | undefined, userId: string | unde
 
 export function useDeleteMessage(roomId: string | undefined) {
   const queryClient = useQueryClient()
+  const api = useDataApi()
 
   return useMutation<void, PostgrestError | Error, { id: string; imagePaths: string[] }>({
     mutationFn: async ({ id, imagePaths }) => {
       if (!roomId) throw new Error('Camera non disponibile.')
-
-      const { error } = await supabase.from('AAA3_chat_messages').delete().eq('id', id)
-
-      if (error) throw error
-
-      // Best-effort: prova a rimuovere i file associati (uno o più), ma non
-      // bloccare se fallisce — la riga in DB è comunque cancellata
-      // correttamente. remove() accetta già un array, una sola chiamata.
-      if (imagePaths.length > 0) {
-        await supabase.storage.from(PHOTO_BUCKET).remove(imagePaths).catch(() => {})
-      }
+      await api.deleteMessage(id, imagePaths)
     },
     onSuccess: (_, { id }) => {
       // Rimuovi il messaggio dalla cache per reattività immediata — il

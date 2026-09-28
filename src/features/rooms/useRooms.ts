@@ -1,28 +1,27 @@
 import { useEffect } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { PostgrestError } from '@supabase/supabase-js'
+import { useDataApi } from '../../lib/dataApi'
 import { supabase } from '../../lib/supabaseClient'
 import type { Database } from '../../lib/database.types'
+import type { RoomOverview } from '../../lib/supabaseDataApi'
 
 type Room = Database['public']['Tables']['AAA3_rooms']['Row']
+export type { RoomOverview }
 
 export function roomsQueryKey(userId: string | undefined) {
   return ['rooms', userId] as const
 }
 
-export type RoomOverview = Database['public']['Functions']['get_my_rooms']['Returns'][number]
-
 // Camere dell'utente con ultimo messaggio e numero di non letti, già
 // ordinate dalla più recente (funzione get_my_rooms, security invoker:
 // valgono le stesse RLS di prima, si vedono solo le proprie camere).
 export function useRooms(userId: string | undefined) {
+  const api = useDataApi()
+
   return useQuery({
     queryKey: roomsQueryKey(userId),
-    queryFn: async (): Promise<RoomOverview[]> => {
-      const { data, error } = await supabase.rpc('get_my_rooms')
-      if (error) throw error
-      return data
-    },
+    queryFn: () => api.getMyRooms(),
     enabled: Boolean(userId),
   })
 }
@@ -35,9 +34,10 @@ export function useRooms(userId: string | undefined) {
 // SUBSCRIBED per gli eventi persi mentre il canale non era collegato.
 export function useRoomsRealtime(userId: string | undefined) {
   const queryClient = useQueryClient()
+  const { sandbox } = useDataApi()
 
   useEffect(() => {
-    if (!userId) return
+    if (!userId || sandbox) return
 
     const refresh = () => queryClient.invalidateQueries({ queryKey: roomsQueryKey(userId) })
 
@@ -71,7 +71,7 @@ export function useRoomsRealtime(userId: string | undefined) {
       window.removeEventListener('online', recoverIfDead)
       supabase.removeChannel(channel)
     }
-  }, [userId, queryClient])
+  }, [userId, sandbox, queryClient])
 }
 
 // Segna la camera come letta quando è aperta E visibile: all'apertura, a
@@ -80,6 +80,7 @@ export function useRoomsRealtime(userId: string | undefined) {
 // Azzera subito il contatore in cache, senza aspettare il server.
 export function useMarkRoomRead(roomId: string | undefined, userId: string | undefined, lastMessageId: string | undefined) {
   const queryClient = useQueryClient()
+  const api = useDataApi()
 
   useEffect(() => {
     if (!roomId || !userId) return
@@ -89,26 +90,21 @@ export function useMarkRoomRead(roomId: string | undefined, userId: string | und
       queryClient.setQueryData<RoomOverview[]>(roomsQueryKey(userId), (rooms) =>
         rooms?.map((room) => (room.id === roomId ? { ...room, unread_count: 0 } : room)),
       )
-      supabase.rpc('mark_room_read', { p_room_id: roomId as string }).then(({ error }) => {
-        if (error) console.error('mark_room_read fallita', error)
-      })
+      api.markRoomRead(roomId as string).catch((error) => console.error('mark_room_read fallita', error))
     }
 
     markRead()
     document.addEventListener('visibilitychange', markRead)
     return () => document.removeEventListener('visibilitychange', markRead)
-  }, [roomId, userId, lastMessageId, queryClient])
+  }, [roomId, userId, lastMessageId, queryClient, api])
 }
 
 export function useCreateRoom(userId: string | undefined) {
   const queryClient = useQueryClient()
+  const api = useDataApi()
 
   return useMutation<Room, PostgrestError, string>({
-    mutationFn: async (roomName: string) => {
-      const { data, error } = await supabase.rpc('create_room', { room_name: roomName })
-      if (error) throw error
-      return data
-    },
+    mutationFn: (roomName: string) => api.createRoom(roomName),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: roomsQueryKey(userId) })
     },
@@ -117,15 +113,10 @@ export function useCreateRoom(userId: string | undefined) {
 
 export function useJoinRoom(userId: string | undefined) {
   const queryClient = useQueryClient()
+  const api = useDataApi()
 
   return useMutation<Room, PostgrestError, string>({
-    mutationFn: async (inviteCode: string) => {
-      const { data, error } = await supabase.rpc('accept_room_invite', {
-        invite_code: inviteCode.trim(),
-      })
-      if (error) throw error
-      return data
-    },
+    mutationFn: (inviteCode: string) => api.joinRoom(inviteCode),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: roomsQueryKey(userId) })
     },
