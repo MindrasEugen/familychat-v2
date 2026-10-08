@@ -1,6 +1,7 @@
 import { useState, type FormEvent, type ReactNode } from 'react'
 import type { Session, SupabaseClient } from '@supabase/supabase-js'
 import { supabase } from '../../lib/supabaseClient'
+import { isNativeApp, WEB_APP_ORIGIN } from '../../lib/platform'
 import type { Database } from '../../lib/database.types'
 import { ChatIcon } from '../../components/icons'
 
@@ -112,7 +113,9 @@ export function LoginPage({
     setInfoMessage(null)
 
     const { error } = await client.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/reset-password`,
+      // Nell'app Android l'origine è https://localhost, che dal link nell'email
+      // non porta da nessuna parte: lì il reset si completa sul sito.
+      redirectTo: `${isNativeApp() ? WEB_APP_ORIGIN : window.location.origin}/reset-password`,
     })
     setLoading(false)
 

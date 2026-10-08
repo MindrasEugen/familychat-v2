@@ -1,9 +1,10 @@
 import { useEffect } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useDataApi } from '../../lib/dataApi'
-import { isIos, isStandalone } from '../../lib/platform'
+import { isIos, isNativeApp, isStandalone } from '../../lib/platform'
 import { supabase } from '../../lib/supabaseClient'
 import { urlBase64ToUint8Array, VAPID_PUBLIC_KEY } from '../../lib/vapidKey'
+import { disableNativePush, dismissNativeRoomNotifications, enableNativePush, getNativePushStatus } from './nativePush'
 
 const SERVICE_WORKER_TIMEOUT_MS = 5000
 
@@ -40,6 +41,8 @@ async function serviceWorkerRegistration(): Promise<ServiceWorkerRegistration | 
 // E il database deve avere la riga (utente, endpoint). Solo la prima non
 // basta: con due account sullo stesso telefono, o se la riga è andata persa,
 // la campanella risultava "attiva" senza che arrivasse nulla.
+// Nell'app Android nativa stesso stato, ma con token Firebase e
+// AAA3_fcm_tokens (vedi nativePush.ts).
 // Nel tour e nella demo resta spenta: senza stato, campanella e avviso non
 // compaiono (e le notifiche vere non vengono toccate).
 export function usePushSubscriptionStatus(userId: string | undefined) {
@@ -48,6 +51,7 @@ export function usePushSubscriptionStatus(userId: string | undefined) {
   return useQuery({
     queryKey: pushStatusQueryKey(userId),
     queryFn: async (): Promise<PushStatus> => {
+      if (isNativeApp()) return getNativePushStatus(userId)
       if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
         return isIos() && !isStandalone() ? 'ios-needs-install' : 'unsupported'
       }
@@ -78,6 +82,7 @@ export function useEnablePush(userId: string | undefined) {
   return useMutation<void, Error, void>({
     mutationFn: async () => {
       if (!userId) throw new Error('Utente non disponibile.')
+      if (isNativeApp()) return enableNativePush(userId)
 
       const permission = await Notification.requestPermission()
       if (permission !== 'granted') {
@@ -129,6 +134,8 @@ export function useDisablePush(userId: string | undefined) {
   return useMutation<void, Error, void>({
     mutationFn: async () => {
       if (!userId) throw new Error('Utente non disponibile.')
+      if (isNativeApp()) return disableNativePush(userId)
+
       const registration = await serviceWorkerRegistration()
       const subscription = await registration?.pushManager.getSubscription()
       if (!subscription) return
@@ -145,23 +152,37 @@ export function useDisablePush(userId: string | undefined) {
 }
 
 // Chiude le notifiche di sistema già mostrate per QUESTA camera quando la
-// si apre — sia tornando in primo piano sia al primo caricamento a freddo
-// (lezione 9, entrambi i casi: un effect al mount copre già entrambi,
-// nessun listener separato su "visibilitychange" necessario). Usa sempre
-// `navigator.serviceWorker.ready`, mai `.controller` (lezione 3: può
-// essere null anche a registrazione avvenuta). Non tocca le notifiche di
-// ALTRE camere, che restano visibili come segnale di "non letto".
+// si apre (lezione 9): al primo caricamento a freddo, al cambio di camera
+// e al ritorno in primo piano. L'ultimo caso serve un listener su
+// "visibilitychange": riprendendo l'app già aperta su questa camera il
+// componente non si rimonta, e le notifiche arrivate nel frattempo
+// restavano visibili. Usa sempre `navigator.serviceWorker.ready`, mai
+// `.controller` (lezione 3: può essere null anche a registrazione
+// avvenuta). Non tocca le notifiche di ALTRE camere, che restano visibili
+// come segnale di "non letto".
 export function useDismissRoomNotifications(roomId: string | undefined) {
   useEffect(() => {
-    if (!roomId || !('serviceWorker' in navigator)) return
+    const native = isNativeApp()
+    if (!roomId || (!native && !('serviceWorker' in navigator))) return
 
-    navigator.serviceWorker.ready
-      .then((registration) => registration.getNotifications())
-      .then((notifications) => {
-        for (const notification of notifications) {
-          if (notification.data?.room_id === roomId) notification.close()
-        }
-      })
-      .catch(() => {})
+    const dismiss = () => {
+      if (document.visibilityState !== 'visible') return
+      if (native) {
+        dismissNativeRoomNotifications(roomId).catch(() => {})
+        return
+      }
+      navigator.serviceWorker.ready
+        .then((registration) => registration.getNotifications())
+        .then((notifications) => {
+          for (const notification of notifications) {
+            if (notification.data?.room_id === roomId) notification.close()
+          }
+        })
+        .catch(() => {})
+    }
+
+    dismiss()
+    document.addEventListener('visibilitychange', dismiss)
+    return () => document.removeEventListener('visibilitychange', dismiss)
   }, [roomId])
 }

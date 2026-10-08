@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { BellIcon, CloseIcon } from '../../components/icons'
+import { isNativeApp } from '../../lib/platform'
 import { useDisablePush, useEnablePush, usePushSubscriptionStatus, type PushStatus } from './usePushSubscription'
 
 // Quanto resta visibile l'avviso "notifiche spente" dopo l'apertura della
@@ -11,7 +12,9 @@ const REMINDER_LEAVE_MS = 400
 
 const REMINDER_TEXT: Record<Exclude<PushStatus, 'subscribed'>, string> = {
   unsubscribed: 'Le notifiche sono spente: attivale per sapere quando ti scrivono.',
-  denied: 'Le notifiche sono bloccate: riattivale per questo sito nelle impostazioni del browser.',
+  denied: isNativeApp()
+    ? 'Le notifiche sono bloccate: riattivale per Chat Famiglia nelle impostazioni del telefono (App → Chat Famiglia → Notifiche).'
+    : 'Le notifiche sono bloccate: riattivale per questo sito nelle impostazioni del browser.',
   'ios-needs-install':
     'Su iPhone le notifiche arrivano solo dall\'app installata: tocca Condividi → "Aggiungi alla schermata Home" e aprila da lì.',
   unsupported: 'Questo browser non supporta le notifiche.',

@@ -49,6 +49,11 @@ self.addEventListener('push', (event) => {
         body: data.body,
         icon: '/icons/icon-192.png',
         badge: '/icons/badge-96.png',
+        // Una notifica per camera: un nuovo messaggio sostituisce quella
+        // precedente della stessa camera invece di accumularsi; `renotify`
+        // fa comunque suonare/vibrare di nuovo.
+        tag: data.room_id ? `room-${data.room_id}` : 'chat',
+        renotify: true,
         data: { room_id: data.room_id || null },
       })
     }),

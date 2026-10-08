@@ -108,6 +108,35 @@ export type Database = {
           },
         ]
       }
+      AAA3_fcm_tokens: {
+        Row: {
+          created_at: string
+          id: string
+          token: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          token: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          token?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "AAA3_fcm_tokens_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "AAA3_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       AAA3_profiles: {
         Row: {
           avatar_url: string | null

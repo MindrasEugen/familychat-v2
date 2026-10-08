@@ -18,6 +18,7 @@ import { initAccounts, registerAccount, updateActiveAccountProfile, useAccountsS
 import { registerServiceWorker } from './lib/registerServiceWorker'
 import { useAuthStatus } from './features/auth/useAuthStatus'
 import { RoomChatPage } from './features/chat/RoomChatPage'
+import { useOpenRoomFromNativeNotification } from './features/notifications/nativePush'
 import { RoomInfoPage } from './features/rooms/RoomInfoPage'
 import { RoomsListPage } from './features/rooms/RoomsListPage'
 import { TranslatorPage } from './features/translator/TranslatorPage'
@@ -41,6 +42,7 @@ function useSyncActiveAccountProfile() {
 
 function AppLayout() {
   useSyncActiveAccountProfile()
+  useOpenRoomFromNativeNotification()
   useAutoStartTour()
   // Alla fine del tour si arriva qui con "Registrati" già aperto.
   const openSignup = useSandboxMode((state) => state.openSignup)
