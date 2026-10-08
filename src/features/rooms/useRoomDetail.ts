@@ -75,6 +75,26 @@ export function useDeleteRoom(userId: string | undefined) {
   })
 }
 
+// Accende/spegne la traduzione automatica di UNA camera per chi chiama
+// (accesa di default). Come per le notifiche, la cache dei membri si
+// aggiorna subito.
+export function useSetRoomTranslationEnabled(roomId: string | undefined, userId: string | undefined) {
+  const queryClient = useQueryClient()
+  const api = useDataApi()
+
+  return useMutation<void, Error, boolean>({
+    mutationFn: async (enabled) => {
+      if (!roomId) throw new Error('Camera non disponibile.')
+      await api.setRoomTranslationEnabled(roomId, enabled)
+    },
+    onSuccess: (_, enabled) => {
+      queryClient.setQueryData<ReturnType<typeof useRoomMembers>['data']>(roomMembersQueryKey(roomId), (members) =>
+        members?.map((member) => (member.user_id === userId ? { ...member, translation_enabled: enabled } : member)),
+      )
+    },
+  })
+}
+
 // Silenzia/riattiva le notifiche di UNA camera per chi chiama.
 // Aggiorna subito la lista membri in cache, così l'interruttore risponde
 // senza attendere il ricaricamento.

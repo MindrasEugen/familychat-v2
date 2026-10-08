@@ -54,9 +54,17 @@ function MessagePhotos({ imagePaths }: { imagePaths: string[] }) {
 // euristica di v1) + correzione manuale, isolata dal resto del messaggio:
 // un fallimento sulla traduzione di UN messaggio non deve mai impedire di
 // leggere il testo originale, mostrato comunque come fallback.
-function MessageBody({ body, currentUserId }: { body: string; currentUserId: string | undefined }) {
+function MessageBody({
+  body,
+  currentUserId,
+  translate,
+}: {
+  body: string
+  currentUserId: string | undefined
+  translate: boolean
+}) {
   const targetLang = getDeviceLang()
-  const translationQuery = useMessageTranslation(body, targetLang)
+  const translationQuery = useMessageTranslation(body, targetLang, translate)
   const correctTranslation = useCorrectTranslation()
   const [isCorrecting, setIsCorrecting] = useState(false)
   const [correctionText, setCorrectionText] = useState('')
@@ -87,6 +95,9 @@ function MessageBody({ body, currentUserId }: { body: string; currentUserId: str
       { onSuccess: () => setIsCorrecting(false) },
     )
   }
+
+  // Traduzione spenta per questa camera: solo il testo originale.
+  if (!translate) return <p>{body}</p>
 
   return (
     <>
@@ -136,6 +147,7 @@ export function MessageList({
   isFounder,
   roomId,
   showPeopleLinks,
+  translate,
 }: {
   messages: Message[]
   membersById: Map<string, MemberInfo>
@@ -144,6 +156,8 @@ export function MessageList({
   roomId: string | undefined
   // Nelle camere di gruppo nome e foto di chi scrive aprono la sua scheda.
   showPeopleLinks: boolean
+  // Traduzione automatica di questa camera per chi legge (Info camera).
+  translate: boolean
 }) {
   const deleteMessage = useDeleteMessage(roomId)
 
@@ -187,7 +201,7 @@ export function MessageList({
                     <span className="who">{senderName}</span>
                   ))}
                 {message.image_paths.length > 0 && <MessagePhotos imagePaths={message.image_paths} />}
-                {message.body && <MessageBody body={message.body} currentUserId={currentUserId} />}
+                {message.body && <MessageBody body={message.body} currentUserId={currentUserId} translate={translate} />}
                 <div className="bubble-foot">
                   {(isMine || isFounder) && (
                     <button

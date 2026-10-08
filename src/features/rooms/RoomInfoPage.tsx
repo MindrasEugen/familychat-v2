@@ -11,6 +11,7 @@ import {
   useRoom,
   useRoomMembers,
   useSetRoomNotificationsMuted,
+  useSetRoomTranslationEnabled,
 } from './useRoomDetail'
 import { useCreateRoomInvite, useRevokeRoomInvite, useRoomInvites } from './useRoomInvites'
 
@@ -60,6 +61,7 @@ export function RoomInfoPage() {
   const removeMember = useRemoveMember(roomId)
   const deleteRoom = useDeleteRoom(userId)
   const setMuted = useSetRoomNotificationsMuted(roomId, userId)
+  const setTranslation = useSetRoomTranslationEnabled(roomId, userId)
   const openDirectChat = useOpenDirectChat()
   const isDirect = roomQuery.data?.kind === 'direct'
   const friendsQuery = useFriends(isDirect ? userId : undefined)
@@ -80,6 +82,7 @@ export function RoomInfoPage() {
   const isFounder = !isDirect && roomQuery.data.founder_id === userId
   const myMembership = membersQuery.data?.find((member) => member.user_id === userId)
   const notificationsOn = myMembership ? !myMembership.notifications_muted : undefined
+  const translationOn = myMembership ? myMembership.translation_enabled : undefined
 
   const notificationsCard = notificationsOn !== undefined && (
     <div className="card">
@@ -110,6 +113,33 @@ export function RoomInfoPage() {
     </div>
   )
 
+  const translationCard = translationOn !== undefined && (
+    <div className="card">
+      <div className="row spread">
+        <div>
+          <span className="section-label">Traduzione automatica</span>
+          <p className="muted small">
+            {translationOn
+              ? "I messaggi in un'altra lingua vengono tradotti nella lingua del tuo telefono."
+              : 'Spenta: vedi i messaggi come sono stati scritti.'}
+          </p>
+        </div>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={translationOn}
+          aria-label={isDirect ? 'Traduzione automatica di questa chat' : 'Traduzione automatica di questa camera'}
+          className="switch"
+          onClick={() => setTranslation.mutate(!translationOn)}
+          disabled={setTranslation.isPending}
+        >
+          <span className="switch-thumb" />
+        </button>
+      </div>
+      {setTranslation.isError && <p role="alert">{setTranslation.error.message}</p>}
+    </div>
+  )
+
   // Chat privata: niente membri, inviti, uscita o eliminazione (la coppia
   // resta, al più in sola lettura). Si può togliere l'amicizia da qui.
   if (isDirect) {
@@ -130,6 +160,7 @@ export function RoomInfoPage() {
 
         <section className="page-body">
           {notificationsCard}
+          {translationCard}
 
           <div className="card">
             <span className="section-label">Amicizia</span>
@@ -201,6 +232,7 @@ export function RoomInfoPage() {
 
       <section className="page-body">
         {notificationsCard}
+        {translationCard}
 
         <div className="card">
           <span className="section-label">Membri</span>

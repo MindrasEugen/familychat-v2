@@ -157,7 +157,7 @@ export const supabaseDataApi = {
   async getRoomMembers(roomId: string) {
     const { data, error } = await supabase
       .from('AAA3_room_members')
-      .select('user_id, role, joined_at, notifications_muted, AAA3_profiles(username, avatar_url)')
+      .select('user_id, role, joined_at, notifications_muted, translation_enabled, AAA3_profiles(username, avatar_url)')
       .eq('room_id', roomId)
       .order('joined_at', { ascending: true })
     if (error) throw error
@@ -178,6 +178,12 @@ export const supabaseDataApi = {
   // security definer: tocca solo la propria riga e solo questa colonna).
   async setRoomNotificationsMuted(roomId: string, muted: boolean): Promise<void> {
     const { error } = await supabase.rpc('set_room_notifications_muted', { p_room_id: roomId, p_muted: muted })
+    if (error) throw error
+  },
+
+  // Traduzione automatica di UNA camera per chi chiama (accesa di default).
+  async setRoomTranslationEnabled(roomId: string, enabled: boolean): Promise<void> {
+    const { error } = await supabase.rpc('set_room_translation_enabled', { p_room_id: roomId, p_enabled: enabled })
     if (error) throw error
   },
 

@@ -107,6 +107,9 @@ export function RoomChatPage() {
   // Finché la risposta non arriva si lascia scrivere: il database rifiuta
   // comunque un messaggio non permesso.
   const readOnly = isDirect && canSendQuery.data === false
+  // Finché i membri caricano si traduce, come prima dell'interruttore.
+  const myMembership = membersQuery.data?.find((member) => member.user_id === userId)
+  const translationEnabled = myMembership?.translation_enabled ?? true
 
   return (
     <div className="chat-page">
@@ -167,6 +170,7 @@ export function RoomChatPage() {
               isFounder={isFounder}
               roomId={roomId}
               showPeopleLinks={!isDirect}
+              translate={translationEnabled}
             />
           )}
         </div>

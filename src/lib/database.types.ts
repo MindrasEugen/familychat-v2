@@ -349,6 +349,7 @@ export type Database = {
           notifications_muted: boolean
           role: string
           room_id: string
+          translation_enabled: boolean
           user_id: string
         }
         Insert: {
@@ -357,6 +358,7 @@ export type Database = {
           notifications_muted?: boolean
           role: string
           room_id: string
+          translation_enabled?: boolean
           user_id: string
         }
         Update: {
@@ -365,6 +367,7 @@ export type Database = {
           notifications_muted?: boolean
           role?: string
           room_id?: string
+          translation_enabled?: boolean
           user_id?: string
         }
         Relationships: [
@@ -628,6 +631,10 @@ export type Database = {
       shares_group_room: { Args: { p_other: string }; Returns: boolean }
       set_room_notifications_muted: {
         Args: { p_muted: boolean; p_room_id: string }
+        Returns: undefined
+      }
+      set_room_translation_enabled: {
+        Args: { p_enabled: boolean; p_room_id: string }
         Returns: undefined
       }
     }

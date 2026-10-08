@@ -21,6 +21,8 @@ interface MemberRow {
   role: 'founder' | 'member'
   joined_at: string
   notifications_muted: boolean
+  // Assente = accesa, come il default del database.
+  translation_enabled?: boolean
 }
 
 export interface SandboxState {
@@ -219,6 +221,7 @@ export function createSandboxDataApi(store: SandboxStore): DataApi {
             role: member.role,
             joined_at: member.joined_at,
             notifications_muted: member.notifications_muted,
+            translation_enabled: member.translation_enabled ?? true,
             AAA3_profiles:
               member.user_id === SANDBOX_USER_ID
                 ? { username: get().profile?.username ?? 'Tu', avatar_url: get().profile?.avatar_url ?? null }
@@ -236,6 +239,14 @@ export function createSandboxDataApi(store: SandboxStore): DataApi {
         rooms: get().rooms.filter((room) => room.id !== roomId),
         members: get().members.filter((member) => member.room_id !== roomId),
         messages: get().messages.filter((message) => message.room_id !== roomId),
+      })
+    },
+
+    async setRoomTranslationEnabled(roomId, enabled) {
+      set({
+        members: get().members.map((member) =>
+          member.room_id === roomId && member.user_id === SANDBOX_USER_ID ? { ...member, translation_enabled: enabled } : member,
+        ),
       })
     },
 

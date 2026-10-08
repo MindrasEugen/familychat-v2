@@ -17,8 +17,9 @@ export function translationQueryKey(text: string, targetLang: string) {
 // Traduzione automatica di un messaggio nella lingua del lettore: prima la
 // memoria condivisa, poi la Edge Function (vedi translate in
 // lib/supabaseDataApi.ts). Una correzione manuale (useCorrectTranslation)
-// ha sempre la priorità.
-export function useMessageTranslation(text: string | null, targetLang: string) {
+// ha sempre la priorità. enabled = false (traduzione spenta per la camera
+// in Info camera): nessuna richiesta, né alla memoria né ai servizi.
+export function useMessageTranslation(text: string | null, targetLang: string, enabled = true) {
   const trimmed = text?.trim() ?? ''
   const api = useDataApi()
 
@@ -31,7 +32,7 @@ export function useMessageTranslation(text: string | null, targetLang: string) {
       if (!hasLetters(trimmed)) return { translatedText: trimmed, sourceLang: 'und' }
       return api.translate(trimmed, targetLang)
     },
-    enabled: trimmed.length > 0,
+    enabled: trimmed.length > 0 && enabled,
     staleTime: Infinity, // il testo di un messaggio non cambia mai una volta inviato
   })
 }
