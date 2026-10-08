@@ -6,9 +6,9 @@ export function Avatar({
 }: {
   url: string | null | undefined
   name: string | null | undefined
-  size?: 'sm' | 'md'
+  size?: 'sm' | 'md' | 'lg' | 'xl'
 }) {
-  const className = size === 'sm' ? 'avatar sm' : 'avatar'
+  const className = size === 'md' ? 'avatar' : `avatar ${size}`
 
   if (url) return <img className={className} src={url} alt="" />
 

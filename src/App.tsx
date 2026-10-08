@@ -22,6 +22,8 @@ import { useOpenRoomFromNativeNotification } from './features/notifications/nati
 import { RoomInfoPage } from './features/rooms/RoomInfoPage'
 import { RoomsListPage } from './features/rooms/RoomsListPage'
 import { TranslatorPage } from './features/translator/TranslatorPage'
+import { FriendsPage } from './features/friends/FriendsPage'
+import { PersonPage } from './features/friends/PersonPage'
 import { openSandbox, useSandboxMode } from './features/sandbox/sandboxMode'
 import { useAutoStartTour } from './features/tour/useAutoStartTour'
 import { getTourTexts } from './features/tutorial/tutorialTexts'
@@ -121,6 +123,22 @@ function AppLayout() {
           element={
             <RequireAuth>
               <RoomInfoPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/rooms/:roomId/people/:userId"
+          element={
+            <RequireAuth>
+              <PersonPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/friends"
+          element={
+            <RequireAuth>
+              <FriendsPage />
             </RequireAuth>
           }
         />

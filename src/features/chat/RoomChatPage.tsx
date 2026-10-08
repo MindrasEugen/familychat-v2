@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import { Avatar } from '../../components/Avatar'
 import { BackIcon, InfoIcon } from '../../components/icons'
 import { useAuthStatus } from '../auth/useAuthStatus'
+import { useCanSendInRoom } from '../friends/useFriends'
 import { PushReminder } from '../notifications/PushControls'
 import { DemoTranslationNote } from '../sandbox/DemoTranslationNote'
 import { useDismissRoomNotifications } from '../notifications/usePushSubscription'
@@ -20,6 +22,8 @@ export function RoomChatPage() {
 
   const roomQuery = useRoom(roomId)
   const membersQuery = useRoomMembers(roomId)
+  const isDirect = roomQuery.data?.kind === 'direct'
+  const canSendQuery = useCanSendInRoom(roomId, isDirect)
   const messagesQuery = useMessages(roomId)
   const loadOlderMessages = useLoadOlderMessages(roomId)
   const [noMoreOlderMessages, setNoMoreOlderMessages] = useState(false)
@@ -95,8 +99,14 @@ export function RoomChatPage() {
     )
   }
 
-  const isFounder = roomQuery.data.founder_id === userId
+  // Nelle chat private nessuno è fondatore (niente cancellazione dei
+  // messaggi altrui, come nel database).
+  const isFounder = !isDirect && roomQuery.data.founder_id === userId
   const memberCount = membersQuery.data?.length
+  const other = isDirect ? membersQuery.data?.find((member) => member.user_id !== userId) : undefined
+  // Finché la risposta non arriva si lascia scrivere: il database rifiuta
+  // comunque un messaggio non permesso.
+  const readOnly = isDirect && canSendQuery.data === false
 
   return (
     <div className="chat-page">
@@ -104,11 +114,21 @@ export function RoomChatPage() {
         <Link to="/rooms" className="icon-btn" aria-label="Indietro">
           <BackIcon />
         </Link>
-        <div className="title">
-          <h1>{roomQuery.data.name}</h1>
-          {memberCount !== undefined && <small>{memberCount === 1 ? '1 membro' : `${memberCount} membri`}</small>}
-        </div>
-        <Link to={`/rooms/${roomId}/info`} className="icon-btn" aria-label="Info camera">
+        {isDirect ? (
+          <>
+            <Avatar url={other?.AAA3_profiles?.avatar_url} name={other?.AAA3_profiles?.username} />
+            <div className="title">
+              <h1>{other?.AAA3_profiles?.username ?? '…'}</h1>
+              <small>Chat privata</small>
+            </div>
+          </>
+        ) : (
+          <div className="title">
+            <h1>{roomQuery.data.name}</h1>
+            {memberCount !== undefined && <small>{memberCount === 1 ? '1 membro' : `${memberCount} membri`}</small>}
+          </div>
+        )}
+        <Link to={`/rooms/${roomId}/info`} className="icon-btn" aria-label={isDirect ? 'Info chat' : 'Info camera'}>
           <InfoIcon />
         </Link>
       </header>
@@ -146,13 +166,21 @@ export function RoomChatPage() {
               currentUserId={userId}
               isFounder={isFounder}
               roomId={roomId}
+              showPeopleLinks={!isDirect}
             />
           )}
         </div>
       </div>
 
       <DemoTranslationNote />
-      <MessageComposer roomId={roomId} userId={userId} />
+      {readOnly ? (
+        <p className="composer readonly-note" role="status">
+          Non siete più amici né in una camera insieme: puoi rileggere la chat, ma non scrivere. Se tornate amici,
+          riprende da qui.
+        </p>
+      ) : (
+        <MessageComposer roomId={roomId} userId={userId} />
+      )}
     </div>
   )
 }

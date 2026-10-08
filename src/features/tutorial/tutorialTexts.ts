@@ -184,7 +184,7 @@ export interface TourTexts {
   watchTour: string
   exitDemo: string
   demo: { translationNote: string }
-  sandbox: { guestName: string; joinRoomError: string }
+  sandbox: { guestName: string; joinRoomError: string; addFriendError: string }
 }
 
 const TOUR_TEXTS: Record<TutorialLang, TourTexts> = {
@@ -246,6 +246,7 @@ const TOUR_TEXTS: Record<TutorialLang, TourTexts> = {
     sandbox: {
       guestName: 'Ospite',
       joinRoomError: 'Nella prova non puoi unirti a una camera vera: crea il tuo account per usare un codice invito.',
+      addFriendError: 'Nella prova non puoi aggiungere amici veri: crea il tuo account per usare un codice amico.',
     },
   },
   ro: {
@@ -306,6 +307,7 @@ const TOUR_TEXTS: Record<TutorialLang, TourTexts> = {
     sandbox: {
       guestName: 'Oaspete',
       joinRoomError: 'În demo nu te poți alătura unei camere reale: creează-ți contul ca să folosești un cod de invitație.',
+      addFriendError: 'În demo nu poți adăuga prieteni reali: creează-ți contul ca să folosești un cod de prieten.',
     },
   },
   en: {
@@ -366,6 +368,7 @@ const TOUR_TEXTS: Record<TutorialLang, TourTexts> = {
     sandbox: {
       guestName: 'Guest',
       joinRoomError: "In the demo you can't join a real room: create your account to use an invite code.",
+      addFriendError: "In the demo you can't add real friends: create your account to use a friend code.",
     },
   },
   fr: {
@@ -426,6 +429,7 @@ const TOUR_TEXTS: Record<TutorialLang, TourTexts> = {
     sandbox: {
       guestName: 'Invité',
       joinRoomError: 'Dans la démo, tu ne peux pas rejoindre un vrai salon : crée ton compte pour utiliser un code d’invitation.',
+      addFriendError: 'Dans la démo, tu ne peux pas ajouter de vrais amis : crée ton compte pour utiliser un code ami.',
     },
   },
 }

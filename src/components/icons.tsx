@@ -47,6 +47,16 @@ export function UserIcon(props: SVGProps<SVGSVGElement>) {
   )
 }
 
+export function UsersIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <circle cx="9" cy="8" r="3.5" />
+      <path d="M2.5 20c.8-3.4 3.3-5 6.5-5s5.7 1.6 6.5 5" />
+      <path d="M15.5 4.6a3.5 3.5 0 0 1 0 6.8M18 15.3c1.9.6 3.1 2.2 3.5 4.7" />
+    </Icon>
+  )
+}
+
 export function BackIcon(props: SVGProps<SVGSVGElement>) {
   return (
     <Icon strokeWidth={2.2} {...props}>

@@ -18,10 +18,18 @@ import { useCreateRoom, useJoinRoom, useRooms, type RoomOverview } from './useRo
 // le anteprime moltiplicherebbe le chiamate al traduttore).
 function lastMessagePreview(room: RoomOverview, currentUserId: string | undefined) {
   if (!room.last_message_at) return 'Nessun messaggio ancora'
-  const who = room.last_message_sender_id === currentUserId ? 'Tu' : (room.last_message_sender_name ?? 'Qualcuno')
+  const mine = room.last_message_sender_id === currentUserId
   const photos = room.last_message_photo_count
   const text = room.last_message_body?.trim() || (photos > 1 ? `📷 ${photos} foto` : '📷 Foto')
+  // Chat privata: chi scrive, se non sei tu, è già il titolo della riga.
+  if (room.kind === 'direct' && !mine) return text
+  const who = mine ? 'Tu' : (room.last_message_sender_name ?? 'Qualcuno')
   return `${who}: ${text}`
+}
+
+// Nelle chat private il "nome" è l'altra persona.
+function roomTitle(room: RoomOverview) {
+  return room.kind === 'direct' ? (room.other_username ?? '(profilo sconosciuto)') : room.name
 }
 
 // Oggi → ora, ieri → "ieri", ultima settimana → giorno, altrimenti data.
@@ -74,7 +82,9 @@ export function RoomsListPage() {
     joinRoom.mutate(trimmed, { onSuccess: () => setInviteCode('') })
   }
 
-  const roomCount = roomsQuery.data?.length
+  // Il conteggio nell'intestazione è delle camere di gruppo, non delle
+  // chat private.
+  const roomCount = roomsQuery.data?.filter((room) => room.kind === 'group').length
 
   return (
     <>
@@ -119,11 +129,15 @@ export function RoomsListPage() {
               return (
                 <li key={room.id}>
                   <Link to={`/rooms/${room.id}`} className={hasUnread ? 'room-item unread' : 'room-item'}>
-                    <span className="room-tile" aria-hidden="true">
-                      {room.name.trim().charAt(0).toUpperCase() || '?'}
-                    </span>
+                    {room.kind === 'direct' ? (
+                      <Avatar url={room.other_avatar_url} name={room.other_username} size="lg" />
+                    ) : (
+                      <span className="room-tile" aria-hidden="true">
+                        {room.name.trim().charAt(0).toUpperCase() || '?'}
+                      </span>
+                    )}
                     <span className="meta">
-                      <b>{room.name}</b>
+                      <b>{roomTitle(room)}</b>
                       <span>{lastMessagePreview(room, userId)}</span>
                     </span>
                     <span className="room-side">

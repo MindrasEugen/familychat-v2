@@ -1,7 +1,7 @@
 import type { Session } from '@supabase/supabase-js'
 import { createStore } from 'zustand/vanilla'
 import type { Database } from '../../lib/database.types'
-import type { CorrectTranslationInput, DataApi, RoomOverview, TranslationResult } from '../../lib/supabaseDataApi'
+import type { CorrectTranslationInput, DataApi, Person, RoomOverview, TranslationResult } from '../../lib/supabaseDataApi'
 import { compareMessages } from '../chat/messageOrder'
 import { getTourTexts } from '../tutorial/tutorialTexts'
 
@@ -91,7 +91,9 @@ export function createSandboxStore({ withProfile }: { withProfile: boolean }) {
       [NONNA_ID]: { username: 'Nonna Maria', avatar_url: null },
       [MIHAI_ID]: { username: 'Mihai', avatar_url: null },
     },
-    rooms: [{ id: SANDBOX_ROOM_ID, name: 'Famiglia', founder_id: NONNA_ID, created_at: minutesAgo(60 * 24 * 30) }],
+    rooms: [
+      { id: SANDBOX_ROOM_ID, name: 'Famiglia', founder_id: NONNA_ID, created_at: minutesAgo(60 * 24 * 30), kind: 'group', direct_key: null },
+    ],
     members: [
       { room_id: SANDBOX_ROOM_ID, user_id: NONNA_ID, role: 'founder', joined_at: minutesAgo(60 * 24 * 30), notifications_muted: false },
       { room_id: SANDBOX_ROOM_ID, user_id: MIHAI_ID, role: 'member', joined_at: minutesAgo(60 * 24 * 20), notifications_muted: false },
@@ -125,12 +127,29 @@ export function createSandboxDataApi(store: SandboxStore): DataApi {
     return url
   }
 
+  function personOf(userId: string): Person {
+    const relative = get().relatives[userId]
+    return { userId, username: relative?.username ?? '?', avatarUrl: relative?.avatar_url ?? null }
+  }
+
+  // Nelle chat private l'altra persona, come get_my_rooms.
+  function otherMember(room: Room) {
+    if (room.kind !== 'direct') return null
+    const other = get().members.find((member) => member.room_id === room.id && member.user_id !== SANDBOX_USER_ID)
+    return other ? personOf(other.user_id) : null
+  }
+
   function overview(room: Room): RoomOverview {
     const roomMessages = get().messages.filter((message) => message.room_id === room.id)
     const last = roomMessages.at(-1)
     const readAt = get().readAt[room.id] ?? ''
+    const other = otherMember(room)
     return {
       ...room,
+      kind: room.kind === 'direct' ? 'direct' : 'group',
+      other_user_id: other?.userId ?? null,
+      other_username: other?.username ?? null,
+      other_avatar_url: other?.avatarUrl ?? null,
       last_message_at: last?.created_at ?? null,
       last_message_body: last?.body ?? null,
       last_message_photo_count: last?.image_paths.length ?? 0,
@@ -155,6 +174,8 @@ export function createSandboxDataApi(store: SandboxStore): DataApi {
     async getMyRooms() {
       return myRooms()
         .map(overview)
+        // Chat private ancora vuote nascoste, come nel database.
+        .filter((room) => room.kind === 'group' || room.last_message_at)
         .sort((a, b) => (b.last_message_at ?? b.created_at).localeCompare(a.last_message_at ?? a.created_at))
     },
 
@@ -163,7 +184,14 @@ export function createSandboxDataApi(store: SandboxStore): DataApi {
     },
 
     async createRoom(roomName) {
-      const room: Room = { id: `sandbox-${crypto.randomUUID()}`, name: roomName.trim(), founder_id: SANDBOX_USER_ID, created_at: new Date().toISOString() }
+      const room: Room = {
+        id: `sandbox-${crypto.randomUUID()}`,
+        name: roomName.trim(),
+        founder_id: SANDBOX_USER_ID,
+        created_at: new Date().toISOString(),
+        kind: 'group',
+        direct_key: null,
+      }
       set({
         rooms: [...get().rooms, room],
         members: [
@@ -299,6 +327,72 @@ export function createSandboxDataApi(store: SandboxStore): DataApi {
 
     async correctTranslation({ sourceText, targetLang, correctedText }: CorrectTranslationInput) {
       set({ corrections: { ...get().corrections, [`${normalize(sourceText)}|${targetLang}`]: correctedText.trim() } })
+    },
+
+    // Nella sandbox niente amici veri: lista vuota, codice finto. Le chat
+    // private si possono aprire con i parenti d'esempio (compagni di camera).
+    async getMyFriendCode() {
+      return 'DEMO2026'
+    },
+
+    async regenerateFriendCode() {
+      return randomCode()
+    },
+
+    async sendFriendRequest() {
+      throw new Error(getTourTexts().sandbox.addFriendError)
+    },
+
+    async sendFriendRequestToUser() {
+      throw new Error(getTourTexts().sandbox.addFriendError)
+    },
+
+    async getSharedRooms(otherUserId) {
+      const theirs = new Set(get().members.filter((member) => member.user_id === otherUserId).map((member) => member.room_id))
+      return myRooms()
+        .filter((room) => room.kind === 'group' && theirs.has(room.id))
+        .map(({ id, name }) => ({ id, name }))
+    },
+
+    async getFriends() {
+      return []
+    },
+
+    async getFriendRequests() {
+      return { incoming: [], outgoing: [] }
+    },
+
+    async acceptFriendRequest() {},
+
+    async deleteFriendRequest() {},
+
+    async removeFriend() {},
+
+    async openDirectChat(otherUserId) {
+      const directKey = [SANDBOX_USER_ID, otherUserId].sort().join(':')
+      const existing = get().rooms.find((room) => room.direct_key === directKey)
+      if (existing) return existing.id
+      const room: Room = {
+        id: `sandbox-${crypto.randomUUID()}`,
+        name: '',
+        founder_id: SANDBOX_USER_ID,
+        created_at: new Date().toISOString(),
+        kind: 'direct',
+        direct_key: directKey,
+      }
+      set({
+        rooms: [...get().rooms, room],
+        members: [
+          ...get().members,
+          { room_id: room.id, user_id: SANDBOX_USER_ID, role: 'member', joined_at: room.created_at, notifications_muted: false },
+          { room_id: room.id, user_id: otherUserId, role: 'member', joined_at: room.created_at, notifications_muted: false },
+        ],
+      })
+      return room.id
+    },
+
+    async canSendInRoom() {
+      return true
     },
 
     async getProfile(userId) {

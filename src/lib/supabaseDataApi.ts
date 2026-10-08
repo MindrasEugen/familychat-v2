@@ -27,6 +27,32 @@ export interface CorrectTranslationInput {
   userId: string
 }
 
+// Un'altra persona (amico, richiesta, chat privata): solo ciò che si mostra.
+export interface Person {
+  userId: string
+  username: string
+  avatarUrl: string | null
+}
+
+export interface FriendRequest {
+  id: string
+  person: Person
+  createdAt: string
+}
+
+export interface FriendRequests {
+  // Ricevute: da accettare o rifiutare. Inviate: in attesa, annullabili.
+  incoming: FriendRequest[]
+  outgoing: FriendRequest[]
+}
+
+// Esito di send_friend_request (vedi la migrazione).
+export type SendFriendRequestResult = 'sent' | 'accepted' | 'already_friends' | 'already_sent'
+
+function toPerson(profile: { id: string; username: string; avatar_url: string | null } | null): Person | null {
+  return profile ? { userId: profile.id, username: profile.username, avatarUrl: profile.avatar_url } : null
+}
+
 const PHOTO_BUCKET = 'room-photos'
 const PROFILE_PHOTO_BUCKET = 'profile-photos'
 export const MESSAGES_PAGE_SIZE = 100
@@ -317,6 +343,117 @@ export const supabaseDataApi = {
       { onConflict: 'source_text_normalized,source_lang,target_lang' },
     )
     if (error) throw error
+  },
+
+  // --- Amici e chat private ---
+  // Regole nel database (20261008150000_friends_and_direct_chats.sql): il
+  // codice lo vede solo il proprietario, l'amicizia nasce solo accettando
+  // una richiesta, la chat privata si apre con amici o compagni di camera.
+
+  async getMyFriendCode(): Promise<string> {
+    const { data, error } = await supabase.rpc('get_my_friend_code')
+    if (error) throw error
+    return data
+  },
+
+  async regenerateFriendCode(): Promise<string> {
+    const { data, error } = await supabase.rpc('regenerate_my_friend_code')
+    if (error) throw error
+    return data
+  },
+
+  async sendFriendRequest(code: string): Promise<SendFriendRequestResult> {
+    const { data, error } = await supabase.rpc('send_friend_request', { p_code: code })
+    if (error) throw error
+    return data as SendFriendRequestResult
+  },
+
+  // Dalla scheda di una persona in una camera: senza codice, permesso solo
+  // verso chi è in una camera di gruppo con te.
+  async sendFriendRequestToUser(otherUserId: string): Promise<SendFriendRequestResult> {
+    const { data, error } = await supabase.rpc('send_friend_request_to_user', { p_user: otherUserId })
+    if (error) throw error
+    return data as SendFriendRequestResult
+  },
+
+  // Camere di gruppo in comune con un'altra persona: la RLS restituisce solo
+  // le iscrizioni nelle camere di cui fai parte anche tu.
+  async getSharedRooms(otherUserId: string): Promise<{ id: string; name: string }[]> {
+    const { data, error } = await supabase
+      .from('AAA3_room_members')
+      .select('AAA3_rooms(id, name, kind)')
+      .eq('user_id', otherUserId)
+    if (error) throw error
+    return data
+      .map((row) => row.AAA3_rooms)
+      .filter((room): room is { id: string; name: string; kind: string } => room?.kind === 'group')
+      .map(({ id, name }) => ({ id, name }))
+      .sort((a, b) => a.name.localeCompare(b.name))
+  },
+
+  async getFriends(userId: string): Promise<Person[]> {
+    const { data, error } = await supabase
+      .from('AAA3_friendships')
+      .select(
+        'user_a, user_b, a:AAA3_profiles!AAA3_friendships_user_a_fkey(id, username, avatar_url), b:AAA3_profiles!AAA3_friendships_user_b_fkey(id, username, avatar_url)',
+      )
+    if (error) throw error
+    return data
+      .map((row) => toPerson(row.user_a === userId ? row.b : row.a))
+      .filter((person): person is Person => person !== null)
+      .sort((x, y) => x.username.localeCompare(y.username))
+  },
+
+  async getFriendRequests(userId: string): Promise<FriendRequests> {
+    const { data, error } = await supabase
+      .from('AAA3_friend_requests')
+      .select(
+        'id, from_user, created_at, sender:AAA3_profiles!AAA3_friend_requests_from_user_fkey(id, username, avatar_url), recipient:AAA3_profiles!AAA3_friend_requests_to_user_fkey(id, username, avatar_url)',
+      )
+      .order('created_at', { ascending: false })
+    if (error) throw error
+    const incoming: FriendRequest[] = []
+    const outgoing: FriendRequest[] = []
+    for (const row of data) {
+      const isIncoming = row.from_user !== userId
+      const person = toPerson(isIncoming ? row.sender : row.recipient)
+      if (!person) continue
+      ;(isIncoming ? incoming : outgoing).push({ id: row.id, person, createdAt: row.created_at })
+    }
+    return { incoming, outgoing }
+  },
+
+  async acceptFriendRequest(requestId: string): Promise<void> {
+    const { error } = await supabase.rpc('accept_friend_request', { p_request_id: requestId })
+    if (error) throw error
+  },
+
+  // Rifiutare una richiesta ricevuta o annullarne una inviata.
+  async deleteFriendRequest(requestId: string): Promise<void> {
+    const { error } = await supabase.from('AAA3_friend_requests').delete().eq('id', requestId)
+    if (error) throw error
+  },
+
+  async removeFriend(userId: string, friendId: string): Promise<void> {
+    const { error } = await supabase
+      .from('AAA3_friendships')
+      .delete()
+      .or(`and(user_a.eq.${userId},user_b.eq.${friendId}),and(user_a.eq.${friendId},user_b.eq.${userId})`)
+    if (error) throw error
+  },
+
+  // Id della camera privata con quella persona (creata se non c'è).
+  async openDirectChat(otherUserId: string): Promise<string> {
+    const { data, error } = await supabase.rpc('open_direct_chat', { p_other: otherUserId })
+    if (error) throw error
+    return data
+  },
+
+  // false solo nelle chat private rimaste senza legame (sola lettura).
+  async canSendInRoom(roomId: string): Promise<boolean> {
+    const { data, error } = await supabase.rpc('can_send_in_room', { p_room_id: roomId })
+    if (error) throw error
+    return data
   },
 
   // --- Profilo ---

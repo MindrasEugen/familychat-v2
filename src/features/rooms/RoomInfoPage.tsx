@@ -1,7 +1,9 @@
+import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Avatar } from '../../components/Avatar'
 import { CloseIcon } from '../../components/icons'
 import { useAuthStatus } from '../auth/useAuthStatus'
+import { useCanSendInRoom, useFriends, useOpenDirectChat, useRemoveFriend } from '../friends/useFriends'
 import {
   useDeleteRoom,
   useLeaveRoom,
@@ -58,6 +60,13 @@ export function RoomInfoPage() {
   const removeMember = useRemoveMember(roomId)
   const deleteRoom = useDeleteRoom(userId)
   const setMuted = useSetRoomNotificationsMuted(roomId, userId)
+  const openDirectChat = useOpenDirectChat()
+  const isDirect = roomQuery.data?.kind === 'direct'
+  const friendsQuery = useFriends(isDirect ? userId : undefined)
+  const removeFriend = useRemoveFriend(userId)
+  const canSendQuery = useCanSendInRoom(roomId, isDirect)
+  // Conferma in linea prima di togliere l'amicizia, come nella pagina Amici.
+  const [confirmRemoveFriend, setConfirmRemoveFriend] = useState(false)
 
   if (roomQuery.isPending) return <p className="muted page-note">Caricamento…</p>
   if (roomQuery.isError || !roomQuery.data) {
@@ -68,9 +77,115 @@ export function RoomInfoPage() {
     )
   }
 
-  const isFounder = roomQuery.data.founder_id === userId
+  const isFounder = !isDirect && roomQuery.data.founder_id === userId
   const myMembership = membersQuery.data?.find((member) => member.user_id === userId)
   const notificationsOn = myMembership ? !myMembership.notifications_muted : undefined
+
+  const notificationsCard = notificationsOn !== undefined && (
+    <div className="card">
+      <div className="row spread">
+        <div>
+          <span className="section-label">{isDirect ? 'Notifiche di questa chat' : 'Notifiche di questa camera'}</span>
+          <p className="muted small">
+            {notificationsOn
+              ? 'Ricevi una notifica per ogni nuovo messaggio.'
+              : isDirect
+                ? 'Silenziata: nessuna notifica da questa chat.'
+                : 'Silenziata: nessuna notifica da questa camera.'}
+          </p>
+        </div>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={notificationsOn}
+          aria-label={isDirect ? 'Notifiche di questa chat' : 'Notifiche di questa camera'}
+          className="switch"
+          onClick={() => setMuted.mutate(notificationsOn)}
+          disabled={setMuted.isPending}
+        >
+          <span className="switch-thumb" />
+        </button>
+      </div>
+      {setMuted.isError && <p role="alert">{setMuted.error.message}</p>}
+    </div>
+  )
+
+  // Chat privata: niente membri, inviti, uscita o eliminazione (la coppia
+  // resta, al più in sola lettura). Si può togliere l'amicizia da qui.
+  if (isDirect) {
+    const other = membersQuery.data?.find((member) => member.user_id !== userId)
+    const isFriend = Boolean(other && friendsQuery.data?.some((friend) => friend.userId === other.user_id))
+    return (
+      <>
+        <header className="page-header">
+          <Link to={`/rooms/${roomId}`} className="icon-btn" aria-label="Chiudi">
+            <CloseIcon />
+          </Link>
+          <Avatar url={other?.AAA3_profiles?.avatar_url} name={other?.AAA3_profiles?.username} />
+          <div className="title">
+            <h1>{other?.AAA3_profiles?.username ?? '…'}</h1>
+            <small>Chat privata</small>
+          </div>
+        </header>
+
+        <section className="page-body">
+          {notificationsCard}
+
+          <div className="card">
+            <span className="section-label">Amicizia</span>
+            {isFriend ? (
+              <>
+                <p className="muted small">
+                  Siete amici. Se togli l'amicizia, la chat resta da rileggere; per scrivervi dovrete essere amici o
+                  in una camera insieme.
+                </p>
+                {confirmRemoveFriend ? (
+                  <>
+                    <p className="muted small">
+                      Togliere {other?.AAA3_profiles?.username ?? 'questa persona'} dagli amici? La chat privata resterà
+                      da rileggere.
+                    </p>
+                    <div className="row">
+                      <button
+                        type="button"
+                        className="btn-danger"
+                        onClick={() =>
+                          other &&
+                          removeFriend.mutate(other.user_id, { onSuccess: () => setConfirmRemoveFriend(false) })
+                        }
+                        disabled={removeFriend.isPending}
+                      >
+                        Togli
+                      </button>
+                      <button
+                        type="button"
+                        className="btn-link"
+                        onClick={() => setConfirmRemoveFriend(false)}
+                        disabled={removeFriend.isPending}
+                      >
+                        Annulla
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <button type="button" className="btn-danger" onClick={() => setConfirmRemoveFriend(true)}>
+                    Togli dagli amici
+                  </button>
+                )}
+              </>
+            ) : (
+              <p className="muted small">
+                {canSendQuery.data === false
+                  ? 'Non siete amici né in una camera insieme: la chat è di sola lettura. Per scrivervi di nuovo, aggiungetevi agli amici con il codice amico.'
+                  : 'Non siete amici, ma siete in una camera insieme: per questo potete scrivervi in privato.'}
+              </p>
+            )}
+            {removeFriend.isError && <p role="alert">{removeFriend.error.message}</p>}
+          </div>
+        </section>
+      </>
+    )
+  }
 
   return (
     <>
@@ -85,32 +200,7 @@ export function RoomInfoPage() {
       </header>
 
       <section className="page-body">
-        {notificationsOn !== undefined && (
-          <div className="card">
-            <div className="row spread">
-              <div>
-                <span className="section-label">Notifiche di questa camera</span>
-                <p className="muted small">
-                  {notificationsOn
-                    ? 'Ricevi una notifica per ogni nuovo messaggio.'
-                    : 'Silenziata: nessuna notifica da questa camera.'}
-                </p>
-              </div>
-              <button
-                type="button"
-                role="switch"
-                aria-checked={notificationsOn}
-                aria-label="Notifiche di questa camera"
-                className="switch"
-                onClick={() => setMuted.mutate(notificationsOn)}
-                disabled={setMuted.isPending}
-              >
-                <span className="switch-thumb" />
-              </button>
-            </div>
-            {setMuted.isError && <p role="alert">{setMuted.error.message}</p>}
-          </div>
-        )}
+        {notificationsCard}
 
         <div className="card">
           <span className="section-label">Membri</span>
@@ -120,10 +210,26 @@ export function RoomInfoPage() {
             <div key={member.user_id} className="member">
               <Avatar url={member.AAA3_profiles?.avatar_url} name={member.AAA3_profiles?.username} size="sm" />
               <b>
-                {member.AAA3_profiles?.username ?? '(profilo sconosciuto)'}
-                {member.user_id === userId && ' (tu)'}
+                {/* Nome → scheda della persona (amicizia, chat privata). */}
+                {member.user_id === userId ? (
+                  `${member.AAA3_profiles?.username ?? '(profilo sconosciuto)'} (tu)`
+                ) : (
+                  <Link to={`/rooms/${roomId}/people/${member.user_id}`} className="member-link">
+                    {member.AAA3_profiles?.username ?? '(profilo sconosciuto)'}
+                  </Link>
+                )}
               </b>
               {member.role === 'founder' && <span className="chip accent">Fondatore</span>}
+              {member.user_id !== userId && (
+                <button
+                  type="button"
+                  className="btn-link"
+                  onClick={() => openDirectChat.mutate(member.user_id)}
+                  disabled={openDirectChat.isPending}
+                >
+                  Scrivi
+                </button>
+              )}
               {isFounder && member.user_id !== userId && (
                 <button
                   type="button"
@@ -137,6 +243,7 @@ export function RoomInfoPage() {
             </div>
           ))}
           {removeMember.isError && <p role="alert">{removeMember.error.message}</p>}
+          {openDirectChat.isError && <p role="alert">{openDirectChat.error.message}</p>}
         </div>
 
         <div className="card" data-tour="invites">

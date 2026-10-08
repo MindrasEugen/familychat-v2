@@ -137,6 +137,101 @@ export type Database = {
           },
         ]
       }
+      AAA3_friend_codes: {
+        Row: {
+          code: string
+          created_at: string
+          user_id: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          user_id: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "AAA3_friend_codes_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "AAA3_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      AAA3_friend_requests: {
+        Row: {
+          created_at: string
+          from_user: string
+          id: string
+          to_user: string
+        }
+        Insert: {
+          created_at?: string
+          from_user: string
+          id?: string
+          to_user: string
+        }
+        Update: {
+          created_at?: string
+          from_user?: string
+          id?: string
+          to_user?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "AAA3_friend_requests_from_user_fkey"
+            columns: ["from_user"]
+            isOneToOne: false
+            referencedRelation: "AAA3_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "AAA3_friend_requests_to_user_fkey"
+            columns: ["to_user"]
+            isOneToOne: false
+            referencedRelation: "AAA3_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      AAA3_friendships: {
+        Row: {
+          created_at: string
+          user_a: string
+          user_b: string
+        }
+        Insert: {
+          created_at?: string
+          user_a: string
+          user_b: string
+        }
+        Update: {
+          created_at?: string
+          user_a?: string
+          user_b?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "AAA3_friendships_user_a_fkey"
+            columns: ["user_a"]
+            isOneToOne: false
+            referencedRelation: "AAA3_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "AAA3_friendships_user_b_fkey"
+            columns: ["user_b"]
+            isOneToOne: false
+            referencedRelation: "AAA3_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       AAA3_profiles: {
         Row: {
           avatar_url: string | null
@@ -292,20 +387,26 @@ export type Database = {
       AAA3_rooms: {
         Row: {
           created_at: string
+          direct_key: string | null
           founder_id: string
           id: string
+          kind: string
           name: string
         }
         Insert: {
           created_at?: string
+          direct_key?: string | null
           founder_id: string
           id?: string
+          kind?: string
           name: string
         }
         Update: {
           created_at?: string
+          direct_key?: string | null
           founder_id?: string
           id?: string
+          kind?: string
           name?: string
         }
         Relationships: [
@@ -454,12 +555,18 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      accept_friend_request: {
+        Args: { p_request_id: string }
+        Returns: undefined
+      }
       accept_room_invite: {
         Args: { invite_code: string }
         Returns: {
           created_at: string
+          direct_key: string | null
           founder_id: string
           id: string
+          kind: string
           name: string
         }
         SetofOptions: {
@@ -469,12 +576,16 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      can_chat_with: { Args: { p_other: string }; Returns: boolean }
+      can_send_in_room: { Args: { p_room_id: string }; Returns: boolean }
       create_room: {
         Args: { room_name: string }
         Returns: {
           created_at: string
+          direct_key: string | null
           founder_id: string
           id: string
+          kind: string
           name: string
         }
         SetofOptions: {
@@ -484,25 +595,37 @@ export type Database = {
           isSetofReturn: false
         }
       }
-      is_room_founder: { Args: { p_room_id: string }; Returns: boolean }
+      get_my_friend_code: { Args: never; Returns: string }
       get_my_rooms: {
         Args: never
         Returns: {
           created_at: string
           founder_id: string
           id: string
+          kind: "group" | "direct"
           last_message_at: string | null
           last_message_body: string | null
           last_message_photo_count: number
           last_message_sender_id: string | null
           last_message_sender_name: string | null
           name: string
+          other_avatar_url: string | null
+          other_user_id: string | null
+          other_username: string | null
           unread_count: number
         }[]
       }
+      is_group_room: { Args: { p_room_id: string }; Returns: boolean }
+      is_room_founder: { Args: { p_room_id: string }; Returns: boolean }
       is_room_member: { Args: { p_room_id: string }; Returns: boolean }
       mark_room_read: { Args: { p_room_id: string }; Returns: undefined }
+      normalize_friend_code: { Args: { p_code: string }; Returns: string }
+      open_direct_chat: { Args: { p_other: string }; Returns: string }
+      regenerate_my_friend_code: { Args: never; Returns: string }
       revoke_room_invite: { Args: { invite_id: string }; Returns: undefined }
+      send_friend_request: { Args: { p_code: string }; Returns: string }
+      send_friend_request_to_user: { Args: { p_user: string }; Returns: string }
+      shares_group_room: { Args: { p_other: string }; Returns: boolean }
       set_room_notifications_muted: {
         Args: { p_muted: boolean; p_room_id: string }
         Returns: undefined

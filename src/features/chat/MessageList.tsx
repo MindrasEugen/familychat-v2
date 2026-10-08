@@ -1,7 +1,9 @@
-import { useState, type FormEvent } from 'react'
+import { Fragment, useState, type FormEvent } from 'react'
+import { Link } from 'react-router-dom'
 import { Avatar } from '../../components/Avatar'
 import { getDeviceLang } from '../../lib/deviceLang'
 import type { Database } from '../../lib/database.types'
+import { dayKey, formatDayLabel } from './dayDividers'
 import { PhotoViewer } from './PhotoViewer'
 import { usePhotoUrl } from './photoUrls'
 import { useDeleteMessage } from './useMessages'
@@ -133,12 +135,15 @@ export function MessageList({
   currentUserId,
   isFounder,
   roomId,
+  showPeopleLinks,
 }: {
   messages: Message[]
   membersById: Map<string, MemberInfo>
   currentUserId: string | undefined
   isFounder: boolean
   roomId: string | undefined
+  // Nelle camere di gruppo nome e foto di chi scrive aprono la sua scheda.
+  showPeopleLinks: boolean
 }) {
   const deleteMessage = useDeleteMessage(roomId)
 
@@ -148,39 +153,63 @@ export function MessageList({
 
   return (
     <ul className="message-list">
-      {messages.map((message) => {
+      {messages.map((message, index) => {
         const isMine = message.sender_id === currentUserId
         const sender = membersById.get(message.sender_id)
         const senderName = sender?.username ?? '(sconosciuto)'
+        // Separatore quando cambia il giorno (e prima del primo messaggio).
+        const newDay = index === 0 || dayKey(messages[index - 1].created_at) !== dayKey(message.created_at)
+        const personPath = showPeopleLinks && sender ? `/rooms/${roomId}/people/${message.sender_id}` : null
 
         return (
-          <li key={message.id} className={isMine ? 'msg mine' : 'msg'}>
-            {!isMine && <Avatar url={sender?.avatarUrl} name={sender?.username} size="sm" />}
-            <div className="bubble">
-              {!isMine && <span className="who">{senderName}</span>}
-              {message.image_paths.length > 0 && <MessagePhotos imagePaths={message.image_paths} />}
-              {message.body && <MessageBody body={message.body} currentUserId={currentUserId} />}
-              <div className="bubble-foot">
-                {(isMine || isFounder) && (
-                  <button
-                    type="button"
-                    className="btn-link"
-                    data-tour={isMine ? 'delete-message' : undefined}
-                    onClick={() =>
-                      deleteMessage.mutate({
-                        id: message.id,
-                        imagePaths: message.image_paths,
-                      })
-                    }
-                    disabled={deleteMessage.isPending}
-                  >
-                    Elimina
-                  </button>
-                )}
-                <time dateTime={message.created_at}>{formatTime(message.created_at)}</time>
+          <Fragment key={message.id}>
+            {newDay && (
+              <li className="day-divider">
+                <span>{formatDayLabel(message.created_at)}</span>
+              </li>
+            )}
+            <li className={isMine ? 'msg mine' : 'msg'}>
+              {!isMine &&
+                (personPath ? (
+                  <Link to={personPath} className="who-avatar" aria-label={`Scheda di ${senderName}`}>
+                    <Avatar url={sender?.avatarUrl} name={sender?.username} size="sm" />
+                  </Link>
+                ) : (
+                  <Avatar url={sender?.avatarUrl} name={sender?.username} size="sm" />
+                ))}
+              <div className="bubble">
+                {!isMine &&
+                  (personPath ? (
+                    <Link to={personPath} className="who">
+                      {senderName}
+                    </Link>
+                  ) : (
+                    <span className="who">{senderName}</span>
+                  ))}
+                {message.image_paths.length > 0 && <MessagePhotos imagePaths={message.image_paths} />}
+                {message.body && <MessageBody body={message.body} currentUserId={currentUserId} />}
+                <div className="bubble-foot">
+                  {(isMine || isFounder) && (
+                    <button
+                      type="button"
+                      className="btn-link"
+                      data-tour={isMine ? 'delete-message' : undefined}
+                      onClick={() =>
+                        deleteMessage.mutate({
+                          id: message.id,
+                          imagePaths: message.image_paths,
+                        })
+                      }
+                      disabled={deleteMessage.isPending}
+                    >
+                      Elimina
+                    </button>
+                  )}
+                  <time dateTime={message.created_at}>{formatTime(message.created_at)}</time>
+                </div>
               </div>
-            </div>
-          </li>
+            </li>
+          </Fragment>
         )
       })}
     </ul>

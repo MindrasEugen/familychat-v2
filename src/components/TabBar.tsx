@@ -1,10 +1,11 @@
 import { NavLink, useMatch } from 'react-router-dom'
 import { useAuthStatus } from '../features/auth/useAuthStatus'
+import { useFriendRequests } from '../features/friends/useFriends'
 import { useRooms, useRoomsRealtime } from '../features/rooms/useRooms'
 import { closeSandbox, useSandboxMode } from '../features/sandbox/sandboxMode'
 import { getTourTexts } from '../features/tutorial/tutorialTexts'
 import { useDataApi } from '../lib/dataApi'
-import { ChatIcon, CloseIcon, TranslateIcon, UserIcon } from './icons'
+import { ChatIcon, CloseIcon, TranslateIcon, UserIcon, UsersIcon } from './icons'
 
 // Barra in basso, solo per chi ha fatto l'accesso. Nascosta dentro una
 // chat: lì il fondo dello schermo è della barra di scrittura.
@@ -20,6 +21,7 @@ export function TabBar() {
   const roomsQuery = useRooms(userId)
   useRoomsRealtime(userId)
   const totalUnread = roomsQuery.data?.reduce((sum, room) => sum + room.unread_count, 0) ?? 0
+  const pendingRequests = useFriendRequests(userId).data?.incoming.length ?? 0
 
   if (status !== 'authenticated' || inChat) return null
 
@@ -36,6 +38,17 @@ export function TabBar() {
             )}
           </span>
           Camere
+        </NavLink>
+        <NavLink to="/friends">
+          <span className="tab-icon">
+            <UsersIcon />
+            {pendingRequests > 0 && (
+              <span className="tab-badge" aria-label={`${pendingRequests} richieste di amicizia`}>
+                {pendingRequests > 99 ? '99+' : pendingRequests}
+              </span>
+            )}
+          </span>
+          Amici
         </NavLink>
         <NavLink to="/translator">
           <TranslateIcon />

@@ -23,7 +23,8 @@ function tourTarget(name: string) {
 }
 
 export function createdRoomId(state: SandboxState): string | undefined {
-  return state.rooms.find((room) => room.founder_id === SANDBOX_USER_ID)?.id
+  // Solo camere di gruppo: aprire una chat privata ne crea una "fondata" da te.
+  return state.rooms.find((room) => room.kind === 'group' && room.founder_id === SANDBOX_USER_ID)?.id
 }
 
 function ownMessageCount(state: SandboxState) {
