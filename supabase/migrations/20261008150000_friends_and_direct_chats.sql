@@ -181,6 +181,7 @@ create or replace function public.normalize_friend_code(p_code text)
 returns text
 language sql
 immutable
+set search_path = public
 as $$
   select upper(regexp_replace(coalesce(p_code, ''), '[^A-Za-z0-9]', '', 'g'));
 $$;
